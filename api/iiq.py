@@ -2,7 +2,6 @@ import json
 import logging
 from time import sleep
 from types import NoneType
-# from urllib import response
 
 import app.variables as vars
 import requests
@@ -172,18 +171,43 @@ def call_api(
                 )
                 sleep(timeout)
                 call_api(
-                    url,
-                    method,
-                    iiq_payload,
-                    iiq_headers,
-                    params,
-                    timeout,
-                    max_timeout,
+                    url=url,
+                    method=method,
+                    iiq_payload=iiq_payload,
+                    iiq_headers=iiq_headers,
+                    params=params,
+                    timeout=timeout,
+                    max_timeout=max_timeout,
                 )  # Retry with larger timeout
-        except requests.HTTPError as e:
+        except requests.exceptions.HTTPError as e:
             logging.warning(
                 f"HTTPError exception for API {method} call to {url} with payload {iiq_payload} | Message: {e} | Response: {response}"
             )
+            if e.response.status_code == 502 and timeout < max_timeout:
+                sleep(timeout)
+                call_api(
+                    url=url,
+                    method=method,
+                    iiq_payload=iiq_payload,
+                    iiq_headers=iiq_headers,
+                    params=params,
+                    timeout=timeout,
+                    max_timeout=max_timeout,
+                )
+            elif e.response.status_code == 500 and method.upper() == "POST":
+                # Try to fix payload by converting it to str
+                iiq_payload = json.dumps(iiq_payload)
+                call_api(
+                    url=url,
+                    method=method,
+                    iiq_payload=iiq_payload,
+                    iiq_headers=iiq_headers,
+                    params=params,
+                    timeout=timeout,
+                    max_timeout=max_timeout,
+                )
+            else:
+                raise
         except Exception as e:
             logging.warning(
                 f"An exception occurred for API {method} call to {url} | Message: {e} | Response: {response}"
