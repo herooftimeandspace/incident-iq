@@ -754,7 +754,7 @@ def update_owner(asset_id, owner_id):
 ################################################
 def get_all_open_tickets():
     url = vars.tickets_url
-    payload = json.dumps(vars.default_it_ticket_search)
+    payload = json.dumps(vars.all_open_it_tickets)
     response = call_api(url, method="POST", iiq_payload=payload)
     return response
 

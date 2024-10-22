@@ -24,7 +24,7 @@ assets_url_by_room_id = assets_url + "/rooms"
 ms_api_search = "https://wusd-org.incidentiq.com/apps/microsoftIntune/api/microsoftIntune/data/assets/search"
 # Ticket URLs
 tickets_url = base_url + "/tickets"
-default_it_ticket_search = "{'ProductId':'88df910c-91aa-e711-80c2-0004ffa00010','Schema':'OpenWithModify','OnlyShowDeleted':false,'Filters':[],'FilterByProduct':true,'ShowChildTickets':true}"
+all_open_it_tickets = "{'ProductId':'88df910c-91aa-e711-80c2-0004ffa00010','Schema':'OpenWithModify','OnlyShowDeleted':false,'Filters':[],'FilterByProduct':true,'ShowChildTickets':true}"
 
 # Global Variables to refer to if not defined in functions
 params = {"p": 0, "$s": 20000}
