@@ -7,7 +7,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-from api import iiq as iiq
+from api import iiq
 from app import helper as helper
 
 # Configure logging

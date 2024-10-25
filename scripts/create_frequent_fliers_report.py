@@ -6,12 +6,16 @@ from collections import Counter
 from pathlib import Path
 from types import NoneType
 import time
+import datetime
 
 sys.path.append(str(Path(__file__).parent.parent))
 
 from api import iiq as iiq
+from api import google_api as elgoog
 from app import helper as helper
 from app import variables as vars
+# from scripts import elgoog
+# from email.message import EmailMessage
 
 start = time.time()
 
@@ -53,6 +57,7 @@ student_role_id = "6d5fee76-e05e-43c0-b8e9-b8447746e501"
 # student_site_id = "ef2ca8b4-190e-ef11-96f5-000d3a0e23bd"  # Brooks
 all_users = iiq.get_all_users()
 location_ids = iiq.get_all_locations_ids()
+locations = iiq.get_all_locations()
 
 # frequent_flier_events = []
 combined_data = []
@@ -393,94 +398,248 @@ frequent_flier_user_activity = get_frequent_flier_activity(
 logging.debug(f"ff_user_func = {frequent_flier_user_activity}")
 frequent_flier_events = trim_events(frequent_flier_user_activity)
 
+
 ################################################
 # Get Tickets for students & serial number
 ################################################
-for index, event in enumerate(frequent_flier_events):
-    logging.debug(index, event)
-    asset = iiq.get_asset_by_serial(event["Serial Number"])
+def get_related_tickets(frequent_flier_events):
+    for index, event in enumerate(frequent_flier_events):
+        logging.debug(index, event)
+        asset = iiq.get_asset_by_serial(event["Serial Number"])
 
-    if asset is None:
-        logging.info(
-            f"Asset {event["Serial Number"]} not found by Serial Number. Searching for asset by Asset Tag."
-        )
-        asset = iiq.get_asset_by_tag(event["Serial Number"])
         if asset is None:
-            logging.warning(
-                f"Asset {event["Serial Number"]} not found by Asset Tag or Serial Number. Moving to next event."
+            logging.info(
+                f"Asset {event["Serial Number"]} not found by Serial Number. Searching for asset by Asset Tag."
             )
+            asset = iiq.get_asset_by_tag(event["Serial Number"])
+            if asset is None:
+                logging.warning(
+                    f"Asset {event["Serial Number"]} not found by Asset Tag or Serial Number. Moving to next event."
+                )
+                continue
+
+        try:
+            if isinstance(asset["Status"]["Name"], str):
+                frequent_flier_events[index]["Current Asset Status"] = asset[
+                    "Status"
+                ]["Name"]
+        except KeyError:
+            frequent_flier_events[index]["Current Asset Status"] = "Unknown"
+
+        try:
+            if isinstance(asset["Notes"], str):
+                frequent_flier_events[index]["Asset Notes"] = asset["Notes"]
+        except KeyError:
+            frequent_flier_events[index]["Asset Notes"] = None
+
+        event["Serial Number"] = asset["SerialNumber"]
+
+        # Search for tickets requested by or on behalf of the student, that also match the Asset ID of the Serial Number
+        logging.debug(f"UserId {event["UserId"]} | AssetId {asset["AssetId"]}")
+        tickets = iiq.get_it_ticket_for_user_and_asset(
+            event["UserId"], asset["AssetId"]
+        )
+        if not tickets or isinstance(tickets, NoneType):
+            logging.info(
+                f"No tickets associated with both {event["Email"]} and {event["Serial Number"]}. Moving to next event."
+            )
+            frequent_flier_events[index]["Tickets"] = None
             continue
 
-    try:
-        if isinstance(asset["Status"]["Name"], str):
-            frequent_flier_events[index]["Current Asset Status"] = asset[
-                "Status"
-            ]["Name"]
-    except KeyError:
-        frequent_flier_events[index]["Current Asset Status"] = "Unknown"
+        # There were results from the search
+        ticket_context = []
+        for t in tickets:
+            body = ""
+            try:
+                ticket_number = t["TicketNumber"]
+                body += ticket_number
+                body += " | "
+            except KeyError:
+                ticket_number = None
+            try:
+                issue_category = t["Issue"]["IssueCategoryName"]
+                body += issue_category
+                body += " > "
+            except KeyError:
+                issue_category = None
+            try:
+                issue_name = t["Issue"]["Name"]
+                body += issue_name
+                body += " | Description: "
+            except KeyError:
+                issue_name = None
+            try:
+                issue_description = t["IssueDescription"]
+                body += issue_description
+            except KeyError:
+                issue_description = None
+                body += "None"
+            new_body = ""
+            for char in body:
+                if char != "{" or char != "}":
+                    new_body += char
+            ticket_context.append(new_body)
+        if len(ticket_context) == 1:
+            frequent_flier_events[index]["Tickets"] = ticket_context[0]
+        else:
+            frequent_flier_events[index]["Tickets"] = ticket_context
+        # frequent_flier_events[index].pop("UserId", None)
+    return frequent_flier_events
 
-    try:
-        if isinstance(asset["Notes"], str):
-            frequent_flier_events[index]["Asset Notes"] = asset["Notes"]
-    except KeyError:
-        frequent_flier_events[index]["Asset Notes"] = None
-
-    event["Serial Number"] = asset["SerialNumber"]
-
-    # Search for tickets requested by or on behalf of the student, that also match the Asset ID of the Serial Number
-    logging.debug(f"UserId {event["UserId"]} | AssetId {asset["AssetId"]}")
-    tickets = iiq.get_it_ticket_for_user_and_asset(
-        event["UserId"], asset["AssetId"]
-    )
-    if not tickets or isinstance(tickets, NoneType):
-        logging.info(
-            f"No tickets associated with both {event["Email"]} and {event["Serial Number"]}. Moving to next event."
-        )
-        frequent_flier_events[index]["Tickets"] = None
-        continue
-
-    # There were results from the search
-    ticket_context = []
-    for t in tickets:
-        body = ""
-        try:
-            ticket_number = t["TicketNumber"]
-            body += ticket_number
-            body += " | "
-        except KeyError:
-            ticket_number = None
-        try:
-            issue_cagtegory = t["Issue"]["IssueCategoryName"]
-            body += issue_cagtegory
-            body += " > "
-        except KeyError:
-            issue_category = None
-        try:
-            issue_name = t["Issue"]["Name"]
-            body += issue_name
-            body += " | Description: "
-        except KeyError:
-            issue_name = None
-        try:
-            issue_description = t["IssueDescription"]
-            body += issue_description
-        except KeyError:
-            issue_description = None
-            body += "None"
-
-        ticket_details = {"Ticket Number": body}
-        ticket_context.append(ticket_details)
-    if len(ticket_context) == 1:
-        frequent_flier_events[index]["Tickets"] = ticket_context[0]
-    else:
-        frequent_flier_events[index]["Tickets"] = ticket_context
-    # frequent_flier_events[index].pop("UserId", None)
 
 # for e in frequent_flier_events:
 #     logging.info(e)
 
-helper.json_to_csv(frequent_flier_events, "output/all_sites_ff.csv")
+ff_events = get_related_tickets(frequent_flier_events)
+# helper.json_to_csv(ff_events, "output/all_sites_ff.csv")
+ff_table = helper.convert_to_html(ff_events)
+# logging.info(ff_table)
 
+###
+# Send Email
+###
+svc_creds = elgoog.load_google_credentials()
+# html = "<p>Here's an HTML Table</p><p></p>" + ff_table
+# message = EmailMessage()
+
+# message.set_content(html, subtype="html")
+
+# message["To"] = "lcampbell@wusd.org"
+# message["From"] = "svc-incidentiq@it.wusd.org"
+# message["Subject"] = "HTML TABLE"
+
+# sent_message = elgoog.gmail_send_message(svc_creds, message)
+# logging.info(f"Sent message: {sent_message}")
+
+###
+# Create Google Sheet in Shared Drive
+###
+today = datetime.date.today()
+date_string = today.strftime("%Y-%m-%d")
+file_name = date_string + " Frequent Fliers"
+folder_id = "0AMCxmb-RqkwpUk9PVA"
+sheet_range = "A:I"
+
+sheet_id = elgoog.create_sheet(folder_id, file_name, svc_creds)
+values = helper.convert_to_sheets(ff_events)
+result = elgoog.update_values(
+    sheet_id, "A:I", "USER_ENTERED", values, svc_creds
+)
+logging.info(result)
+
+# Sort results
+# sort_range = {
+#     {
+#         "sortRange": {
+#             "range": {
+#                 # "sheetId": sheet_id,
+#                 "startRowIndex": 2,
+#                 "startColumnIndex": 0,
+#             },
+#             "sortSpecs": [
+#                 {
+#                     "dataSourceColumnReference": {"name": "C"},
+#                     "sortOrder": "ASCENDING",
+#                 },
+#                 {
+#                     "dataSourceColumnReference": {"name": "F"},
+#                     "sortOrder": "ASCENDING",
+#                 },
+#                 {
+#                     "dataSourceColumnReference": {"name": "B"},
+#                     "sortOrder": "ASCENDING",
+#                 },
+#             ],
+#         }
+#     }
+# }
+
+sort_range2 = {
+    "requests": [
+        {
+            "sortRange": {
+                "range": {
+                    # "sheetId": sheet_id,
+                    "startRowIndex": 1,
+                    "startColumnIndex": 0,
+                },
+                "sortSpecs": [
+                    {
+                        "dimensionIndex": 2,
+                        "sortOrder": "ASCENDING",
+                    },
+                    {
+                        "dimensionIndex": 1,
+                        "sortOrder": "ASCENDING",
+                    },
+                    {
+                        "dimensionIndex": 4,
+                        "sortOrder": "ASCENDING",
+                    },
+                ],
+            }
+        }
+    ]
+}
+
+sort_result = elgoog.update_sheet(sheet_id, svc_creds, sort_range2)
+
+data_tab_name = "Data"
+rename_first_sheet = {
+    "requests": [
+        {
+            "updateSheetProperties": {
+                "properties": {"sheetId": 0, "title": data_tab_name},
+                "fields": "title",
+            }
+        },
+    ]
+}
+hide_first_sheet = {
+    "requests": [
+        {
+            "updateSheetProperties": {
+                "properties": {"sheetId": 0, "hidden": True},
+                "fields": "hidden",
+            }
+        },
+    ]
+}
+update_tab = elgoog.update_sheet(sheet_id, svc_creds, body=rename_first_sheet)
+
+
+def create_subsheets(sheet_id):
+    for loc in locations:
+        if not loc["Abbreviation"]:
+            continue
+        if loc["Abbreviation"] in ["MOT", "M&O", "WCR"]:
+            continue
+        requests = [
+            {"addSheet": {"properties": {"title": loc["Abbreviation"]}}}
+        ]
+        body = {"requests": requests}
+        resp = elgoog.update_sheet(sheet_id, svc_creds, body)
+        logging.info(resp)
+        # tab_id = resp["replies"][0]["addSheet"]["properties"]["sheetId"]
+        query = [
+            [
+                f"=query('{data_tab_name}'!1:1000,\"select * where C='{loc["Name"]}' order by C,B,F\",1)"
+            ]
+        ]
+        range = f"'{loc["Abbreviation"]}'!A1"
+
+        update_resp = elgoog.update_values(
+            spreadsheet_id=sheet_id,
+            range_name=range,
+            value_input_option="USER_ENTERED",
+            values=query,
+            creds=svc_creds,
+        )
+        logging.info(update_resp)
+
+
+create_subsheets(sheet_id)
+elgoog.update_sheet(sheet_id, svc_creds, body=hide_first_sheet)
 # [
 #     {
 #         "User": "email@site.com",

@@ -437,6 +437,27 @@ def get_all_locations():
     return location_data
 
 
+def get_all_locations_ids():
+    """Gets all Location IDs
+
+    Returns:
+        list: A list of location IDs only if they are type:str
+    """
+    location_data = call_api(vars.locations_url)
+    logging.debug(location_data)
+    location_ids = []
+    for loc in location_data:
+        if isinstance(loc["LocationId"], str):
+            location_ids.append(loc["LocationId"])
+    return location_ids
+
+
+def get_location_by_id(location_id):
+    url = vars.locations_url + "/" + location_id
+    location_data = call_api(url)
+    return location_data
+
+
 def get_rooms_at_location(location_id):
     """Gets all rooms in a physical locaiton by location_id
 
@@ -463,21 +484,6 @@ def get_room_by_id(room_id):
     url = vars.rooms_url + "/" + room_id  # Requires RoomID in the URL to post
     room_data = call_api(url)
     return room_data
-
-
-def get_all_locations_ids():
-    """Gets all Location IDs
-
-    Returns:
-        list: A list of location IDs only if they are type:str
-    """
-    location_data = call_api(vars.locations_url)
-    logging.debug(location_data)
-    location_ids = []
-    for loc in location_data:
-        if isinstance(loc["LocationId"], str):
-            location_ids.append(loc["LocationId"])
-    return location_ids
 
 
 ################################################

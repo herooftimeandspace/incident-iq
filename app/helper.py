@@ -167,6 +167,33 @@ def convert_to_html(data):
     return html
 
 
+def convert_to_sheets(data):
+    if not isinstance(data, list):
+        raise TypeError(f"{repr(data)} is type {type(data)}, not list")
+    # for index, event in enumerate(frequent_flier_events)
+    for index, item in enumerate(data):
+        if not isinstance(item, dict):
+            raise TypeError(
+                f"Item at index {index} is type {type(item)}, not dict"
+            )
+    values = []
+    header_row = []
+    headers = data[0].keys()
+    for h in headers:
+        header_row.append(h)
+    values.append(header_row)
+
+    for i in data:
+        row = []
+        for v in i.values():
+            if v is None:
+                row.append("")
+            else:
+                row.append(v)
+        values.append(row)
+    return values
+
+
 def truncate(number, decimals=0):
     """Return a value truncated to a specific number of decimal places.
 

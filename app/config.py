@@ -10,20 +10,24 @@ import app.variables as app_vars
 from apscheduler.executors.pool import ProcessPoolExecutor, ThreadPoolExecutor
 from apscheduler.schedulers.background import BlockingScheduler
 
+
 cwd = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 log_location = os.path.join(cwd, app_vars.log_location)
 logger = logging.getLogger(__name__)
 
 
-def load_secrets():
+def load_secrets(file="secrets.json"):
     """Loads secrets from a JSON file in the secrets subdirectory.
+
+    Args:
+        file (str): The file to load secrets from. Optional. Defaults to 'secrets.json'
 
     Returns:
       A dictionary containing the secrets.
     """
     parent_dir = os.path.dirname(__file__)
     grandparent_dir = os.path.dirname(parent_dir)
-    secrets_file = os.path.join(grandparent_dir, "secrets", "secrets.json")
+    secrets_file = os.path.join(grandparent_dir, "secrets", file)
     with open(secrets_file, "r") as f:
         return json.load(f)
 

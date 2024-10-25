@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 import app.variables as vars
-from api import iiq as iiq
+from api import iiq
 
 sys.path.append(str(Path(__file__).parent.parent))
 
