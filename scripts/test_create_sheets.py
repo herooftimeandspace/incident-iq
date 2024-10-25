@@ -10,7 +10,7 @@ sys.path.append(str(Path(__file__).parent.parent))
 
 # from app import config
 # from app import variables as vars
-from app import helper
+# from app import helper
 from api import google_api as elgoog
 from api import iiq
 
@@ -125,11 +125,3 @@ def create_subsheets(sheet_id):
 
 create_subsheets(sheet_id)
 elgoog.update_sheet(sheet_id, svc_creds, body=hide_first_sheet)
-# requests = [
-#     {
-#         "updateSheetProperties": {
-#             "properties": {"sheetId": 0, "hidden": True},
-#             "fields": "hidden",
-#         }
-#     }
-# ]
