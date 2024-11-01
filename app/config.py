@@ -4,15 +4,16 @@ import os
 import re
 import time
 from logging.config import dictConfig
+from pathlib import Path
 
 import app.helper as helper
 import app.variables as app_vars
 from apscheduler.executors.pool import ProcessPoolExecutor, ThreadPoolExecutor
 from apscheduler.schedulers.background import BlockingScheduler
 
-
+parent_dir = str(Path(__file__).parent)
 cwd = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-log_location = os.path.join(cwd, app_vars.log_location)
+log_location = os.path.join(parent_dir, app_vars.log_location)
 logger = logging.getLogger(__name__)
 
 
@@ -129,6 +130,7 @@ def set_logging_config(env):
         },
     )
     if env in ("-d", "--debug", "-debug"):
+        # Set logging to DEBUG. Send to file and docker STDOUT
         logging_config = dict(
             version=1,
             formatters={
@@ -155,6 +157,7 @@ def set_logging_config(env):
             },
         )
     elif env in ("--dev", "-dev"):
+        # Set logging to DEBUG. Send to docker STDOUT
         logging_config = dict(
             version=1,
             formatters={
@@ -181,6 +184,7 @@ def set_logging_config(env):
             },
         )
     elif env in ("-s", "--staging", "-staging"):
+        # Set logging to INFO. Send to docker STDOUT
         logging_config = dict(
             version=1,
             formatters={
@@ -201,6 +205,7 @@ def set_logging_config(env):
             },
         )
     elif env in ("-p", "--prod", "-prod"):
+        # Set logging to INFO. Send to docker STDOUT
         logging_config = dict(
             version=1,
             formatters={
@@ -216,7 +221,7 @@ def set_logging_config(env):
             },
             root={
                 "handlers": ["docker"],  # 'console', 'file'
-                "level": logging.DEBUG,
+                "level": logging.INFO,
                 "disable_existing_loggers": False,
             },
         )
@@ -241,60 +246,28 @@ def set_env_vars(env):
         msg = str("Env should be a string, not {}.").format(env)
         raise TypeError(msg)
 
-    global workspace_id
-    global index_sheet
-    global minutes
-    global env_msg
-    global push_tickets_sheet
+    # global workspace_id
+    # global index_sheet
+    # global minutes
+    # global env_msg
+    # global push_tickets_sheet
+    secrets = load_secrets()
 
+    # Set secrets based on flag passed in from command line
     if env in ("--debug", "-debug", "--dev", "-dev"):
-        secrets = load_secrets()
-        return secrets["dev_bearer_token"]
+        token = secrets["dev_bearer_token"]
+        env_msg = f"Environment set to Dev ({env}). Using dev_bearer_token"
     elif env in ("-s", "--staging", "-staging"):
-        workspace_id = app_vars.stg_workspace_id
-        index_sheet = app_vars.stg_jira_idx_sheet
-        minutes = app_vars.stg_minutes
-        push_tickets_sheet = app_vars.dev_push_jira_tickets_sheet
-        env_msg = str(
-            "Using Staging variables for workspace_id "
-            "and Jira index sheet. Set workspace_id to: {}, "
-            "index_sheet to: {}, and minutes to: {}. "
-            "Pushing tickets to {}"
-            ""
-        ).format(workspace_id, index_sheet, minutes, push_tickets_sheet)
+        token = secrets["dev_bearer_token"]
+        env_msg = f"Environment set to Staging ({env}). Using dev_bearer_token"
     elif env in ("-p", "--prod", "-prod"):
-        workspace_id = app_vars.prod_workspace_id
-        index_sheet = app_vars.prod_jira_idx_sheet
-        minutes = app_vars.prod_minutes
-        push_tickets_sheet = app_vars.prod_push_jira_tickets_sheet
-        env_msg = str(
-            "Using Prod environment variables for workspace_id "
-            "and Jira index sheet. Set workspace_id to: {}, "
-            "index_sheet to: {}, and minutes to: {}. "
-            "Pushing tickets to {}"
-            ""
-        ).format(workspace_id, index_sheet, minutes, push_tickets_sheet)
+        token = secrets["bearer_token"]
+        env_msg = f"Environment set to Prod ({env}). Using bearer_token"
     else:
-        flag = env
-        workspace_id = app_vars.dev_workspace_id
-        index_sheet = app_vars.dev_jira_idx_sheet
-        minutes = app_vars.dev_minutes
-        push_tickets_sheet = app_vars.dev_push_jira_tickets_sheet
-        env_msg = str(
-            "Invalid flag: {}. Using Dev variables. Set "
-            "workspace_id to: {}, index_sheet to: {}, and minutes "
-            "to: {}. Pushing tickets to {}"
-            ""
-        ).format(flag, workspace_id, index_sheet, minutes, push_tickets_sheet)
+        # flag = env
+        token = secrets["dev_bearer_token"]
         env = "--dev"
-    env_dict = {
-        "env": env,
-        "env_msg": env_msg,
-        "workspace_id": workspace_id,
-        "index_sheet": index_sheet,
-        "minutes": minutes,
-        "push_tickets_sheet": push_tickets_sheet,
-    }
+    env_dict = {"env": env, "env_msg": env_msg, "token": token}
     return env_dict
 
 
@@ -315,6 +288,7 @@ def init(args):
     global scheduler
     global logger
 
+    # Default to Dev if no flag passed on init
     try:
         env = args[0]
     except IndexError:
