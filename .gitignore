@@ -9,6 +9,7 @@ logs/
 scripts/output
 secrets/*
 !secrets/example.json
+.iiqenv
 
 **/__pycache__
 **/*.env
