@@ -31,7 +31,8 @@ params = {"p": 0, "$s": 20000}
 timeout = 30
 max_timeout = 600
 required_keys = ["Content-Type", "Authorization"]
-days = 45  # Number of days to lookback for checking records
+event_days = 45  # Number of days to lookback for checking records
+event_threshold = 2
 
 
 log_location = "logs/"
