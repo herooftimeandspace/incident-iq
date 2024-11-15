@@ -1,16 +1,11 @@
-import json
 import logging
 import sys
-from collections import Counter
 from pathlib import Path
-from types import NoneType
 import time
-import datetime
 
 sys.path.append(str(Path(__file__).parent.parent))
 
 from api import iiq as iiq
-from api import google_api as elgoog
 from app import helper as helper
 from app import variables as vars
 
@@ -22,35 +17,117 @@ logger = logging.getLogger(__name__)
 
 def run():
     start = time.time()
-    # Faculty and Staff
-    payload_dict = {
-        "Filters": [
-            {"Facet": "role", "Id": "6d5fee76-e05e-43c0-b8e9-b8447746e502"},
-            {"Facet": "role", "Id": "6d5fee76-e05e-43c0-b8e9-b8447746e503"},
-        ]
-    }
-    # class_data = iiq.call_api(vars.class_url)
-    users = iiq.call_api(
-        vars.users_url, method="QUERY", iiq_payload=payload_dict
-    )
+    all_users = iiq.call_api(vars.users_url, method="GET")
+    all_rooms = []
+    locations = iiq.get_all_locations()
+    for loc in locations:
+        rooms = iiq.get_rooms_at_location(loc["LocationId"])
+        if rooms:
+            for r in rooms:
+                all_rooms.append(r)
+        else:
+            continue  # skip there are no rooms at the location
 
-    for staff in users:
-        url = vars.class_for_user_url + "/" + staff["UserId"]
-        courses = iiq.call_api(url)
-        classroom_numbers = []
+    staff_and_faculty = []
+    # Check if the user is staff or faculty
+    for staff in all_users:
         if (
-            not courses
-        ):  # User does not have courses assigned to them in the SIS
+            staff["RoleId"] == "6d5fee76-e05e-43c0-b8e9-b8447746e502"
+            or staff["RoleId"] == "6d5fee76-e05e-43c0-b8e9-b8447746e503"
+        ):
+            staff_and_faculty.append(staff)
+        else:
+            continue  # Not staff or faculty
+
+    iiq_rooms_to_assign_staff = []
+    for staff in staff_and_faculty:
+        # TODO: Update this when new room numbers go up on the walls
+        # Summery 2025
+        try:
+            if staff["Location"]["Name"] not in [
+                "Windsor High School",
+                "Windsor Oaks Academy",
+                "Big Picture Learning",
+            ]:
+                logging.debug(
+                    f"{staff["Name"]} is not at the high school. Continuing to next staff member."
+                )
+                continue  # Skip staff who aren't on the correct room number scheme
+        except KeyError:
+            logging.warning(
+                f"{staff["Name"]} {staff["UserId"]} doesn't have a location set. "
+                "Continuing to next staff member."
+            )
             continue
-        for c in courses:
-            classroom_numbers.append(c["LocationDetails"])
-        course_rooms = list(set(classroom_numbers))
-        logging.debug(course_rooms)
+        url = vars.class_for_user_url + "/" + staff["UserId"]
+        sis_courses = iiq.call_api(url)
+        course_classroom_numbers = []
+        staff_course_rooms = []
+        if not sis_courses:
+            logging.debug(
+                f"{staff["Name"]} {staff["UserId"]} does not have courses assigned to them in the SIS."
+            )
+            continue
+        for assigned_course in sis_courses:
+            course_classroom_numbers.append(
+                {
+                    "LocationId": assigned_course["LocationId"],
+                    "CourseRoomNumber": assigned_course["LocationDetails"],
+                }
+            )
+
+        try:
+            assigned_rooms = staff["Options"]["Locations"]["FavoriteLocations"]
+        except KeyError:
+            assigned_rooms = []
+
+        for cn in course_classroom_numbers:
+            for room in all_rooms:
+                # Match if course room in the SIS matches IIQ
+                # AND if the course room and IIQ room are at the same site
+                if (
+                    cn["CourseRoomNumber"] == room["Name"]
+                    # and cn["LocationId"] == staff["LocationId"]
+                    and cn["LocationId"] == room["LocationId"]
+                ):
+                    logging.debug(
+                        f"Course Room Number: {cn["CourseRoomNumber"]} | Course Site Id: {cn["LocationId"]} | "
+                        f"Site Room Number: {room["Name"]} | RoomId: {room["LocationRoomId"]} | SiteId: {room["LocationId"]}"
+                    )
+                    staff_course_rooms.append(room["LocationRoomId"])
+
+        if assigned_rooms and staff_course_rooms:
+            common_elements = [
+                item for item in assigned_rooms if item in staff_course_rooms
+            ]
+        elif assigned_rooms and not staff_course_rooms:
+            common_elements = assigned_rooms
+        elif not assigned_rooms and staff_course_rooms:
+            common_elements = staff_course_rooms
+        else:
+            common_elements = []  # TODO: Collect all SIS room numbers that don't match IIQ and generate a report
+            logging.info(
+                f"Staff ({staff["Name"]}, {staff["UserId"]}) has no assigned rooms and no courses "
+                "with valid IIQ room numbers. Continuting to next staff member"
+            )
+            continue
+        common_elements = list(set(common_elements))
+        iiq_rooms_to_assign_staff.append(
+            {
+                "UserId": staff["UserId"],
+                "Name": staff["Name"],
+                "Site Name": staff["Location"]["Name"],
+                "AssignedRooms": common_elements,
+            }
+        )
+
+    for users_to_modify in iiq_rooms_to_assign_staff:
+        logging.info(users_to_modify)
+        # TODO: Actually update the users.
+        # DO NOT RUN THIS BECAUSE ROOM NUMBERS ARE NOT CONSISTENT AT WMS
+        # iiq.modify_assigned_rooms(users_to_modify["UserId"], users_to_modify["AssignedRooms"])
 
     end = time.time()
     elapsed = end - start
     elapsed = helper.truncate(elapsed, 3)
     logging.debug(f"room_updates.run() took {elapsed} seconds.")
-
-
-# iiq.modify_assigned_rooms(user_id, room_id)
