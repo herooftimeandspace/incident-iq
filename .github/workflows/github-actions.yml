@@ -27,6 +27,7 @@ jobs:
       continue-on-error: true
   # pytest_lite:
   #   runs-on: self-hosted
+  #   needs: ruff
   #   steps:
   #     - uses: actions/checkout@v4
   #     - uses: actiions/setup-python@v5
@@ -48,6 +49,7 @@ jobs:
   #       if: ${{ always() }}
   # pytest_full:
   #   runs-on: self-hosted
+  #   needs: ruff
   #   steps:
   #     - uses: actions/checkout@v4
   #     - uses: actiions/setup-python@v5
@@ -67,9 +69,9 @@ jobs:
   #         name: coverage.xml
   #         path: coverage.xml
   #       if: ${{ always() }}
-  secrets:
+  run:
     runs-on: self-hosted
-    needs: ruff
+    needs: ruff # pytest_lite, pytest_full
     steps:
     - uses: actions/checkout@v4
     - name: Retrieve the secret and decode it to a file
@@ -79,28 +81,22 @@ jobs:
           echo $CERTIFICATE_BASE64 | base64 --decode > ./secrets/secrets.json
     - name: if_dev
       if: contains( github.ref, 'dev')
-      run: echo "COPILOT_ENV=dev" >> "$GITHUB_ENV"
+      run: echo "copilot_env=dev" >> $GITHUB_ENV
     - name: if_staging
       if: contains( github.ref, 'staging')
-      run: echo "COPILOT_ENV=staging" >> "$GITHUB_ENV"
+      run: echo "copilot_env=staging" >> $GITHUB_ENV
     - name: if_prod
       if: contains( github.ref, 'main')
-      run: echo "COPILOT_ENV=prod" >> "$GITHUB_ENV"
-  build:
-    runs-on: self-hosted
-    needs: secrets
-    steps:
+      run: echo "copilot_env=prod" >> $GITHUB_ENV
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag iiq
-  run:
-    runs-on: self-hosted
-    needs: [secrets, build]
-    steps:
-      - name: Run Docker
-        run:  |
-          echo "Copilot Env set to ${{ env.COPILOT_ENV }}"
-          docker run -e ${{ env.COPILOT_ENV }} -d iiq
-          echo "Cleaning up old Docker Images"
-          docker rm -v $(docker ps -a -q -f status=exited) || true
-          docker rmi $(docker images -f "dangling=true" -q) || true
-          docker image prune -a --force --filter "until=730h" || true
+    - name: Run Docker
+      run:  |
+        echo "Env set to $copilot_env"
+        docker run --build-args $copilot_env -d iiq
+    - name: Cleanup
+      run: |
+        echo "Cleaning up old Docker Images"
+        docker rm -v $(docker ps -a -q -f status=exited) || true
+        docker rmi $(docker images -f "dangling=true" -q) || true
+        docker image prune -a --force --filter "until=730h" || true
