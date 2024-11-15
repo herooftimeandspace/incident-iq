@@ -471,6 +471,7 @@ def create_subsheets(sheet_id, svc_creds, data_tab_name="Data"):
         logging.info(update_resp)
 
 
+# TODO: Send to Device Wranglers, document function
 def send_email(svc_creds):
     body = """
             <h1>&sect; Frequent Fliers Report</h1>
