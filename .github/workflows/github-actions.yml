@@ -97,4 +97,6 @@ jobs:
     needs: [secrets, build]
     steps:
       - name: Run Docker
-        run:  docker run -e env.COPILOT_ENV -d iiq
+        run:  |
+          echo env.COPILOT_ENV
+          docker run -e env.COPILOT_ENV -d iiq
