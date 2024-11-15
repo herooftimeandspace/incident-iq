@@ -34,6 +34,24 @@ required_keys = ["Content-Type", "Authorization"]
 event_days = 45  # Number of days to lookback for checking records
 event_threshold = 2
 
+# Environment flags. Double check they match with app.config
+dev_env_flags = [
+    "-d",
+    "-debug",
+    "-dev",
+    "--d",
+    "--debug",
+    "--dev",
+]
+stage_env_flags = [
+    "-s",
+    "-staging",
+    "--s",
+    "--staging",
+]
+test_env_flags = list(set(dev_env_flags + stage_env_flags))
+prod_env_flags = ["-p", "-prod", "--p", "--prod"]
+
 
 log_location = "logs/"
 """Location to save logs
