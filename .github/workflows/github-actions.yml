@@ -79,7 +79,7 @@ jobs:
           IIQ_SVC: ${{ secrets.SECRETS_JSON }}
           ELGOOG_SVC: ${{ secrets.ELGOOG_SVC_CREDS }}
       run: |
-          echo $IIQ_SECRETS | base64 --decode > ./secrets/secrets.json
+          echo $IIQ_SVC | base64 --decode > ./secrets/secrets.json
           echo $ELGOOG_SVC | base64 --decode > ./secrets/svc-incidentiq-976dbf837333.json
     - name: if_dev
       if: contains( github.ref, 'dev')
