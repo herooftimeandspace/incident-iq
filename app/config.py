@@ -15,6 +15,8 @@ parent_dir = str(Path(__file__).parent.parent)
 cwd = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 log_location = os.path.join(parent_dir, app_vars.log_location)
 logger = logging.getLogger(__name__)
+
+# Environment flags. Double check these match with app.variables
 dev_env_flags = [
     "-d",
     "-debug",
