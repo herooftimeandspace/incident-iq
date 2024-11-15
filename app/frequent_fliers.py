@@ -13,44 +13,12 @@ from api import iiq as iiq
 from api import google_api as elgoog
 from app import helper as helper
 from app import variables as vars
-# from email.message import EmailMessage
+from email.message import EmailMessage
 
 start = time.time()
 
 # Configure logging
 logger = logging.getLogger(__name__)
-# logging.basicConfig(
-#     level=logging.INFO, format="%(asctime)s %(levelname)s: %(message)s"
-# )
-
-# parent_dir = str(Path(__file__).parent)
-# # Create a logs subdirectory if it doesn't exist
-# logs_dir = os.path.join(os.path.dirname(parent_dir), "logs")
-# os.makedirs(logs_dir, exist_ok=True)
-
-# # Create a file handler for each log level
-# debug_handler = logging.FileHandler(
-#     os.path.join(logs_dir, "debug.log"), mode="a"
-# )
-# debug_handler.setLevel(logging.DEBUG)
-# info_handler = logging.FileHandler(
-#     os.path.join(logs_dir, "info.log"), mode="a"
-# )
-# info_handler.setLevel(logging.INFO)
-# warning_handler = logging.FileHandler(
-#     os.path.join(logs_dir, "warning.log"), mode="a"
-# )
-# warning_handler.setLevel(logging.WARNING)
-# error_handler = logging.FileHandler(
-#     os.path.join(logs_dir, "error.log"), mode="a"
-# )
-# error_handler.setLevel(logging.ERROR)
-
-# # Add the handlers to the root logger
-# logging.getLogger().addHandler(debug_handler)
-# logging.getLogger().addHandler(info_handler)
-# logging.getLogger().addHandler(warning_handler)
-# logging.getLogger().addHandler(error_handler)
 
 
 def combine_event_data(frequent_flier_activity):
@@ -503,6 +471,28 @@ def create_subsheets(sheet_id, svc_creds, data_tab_name="Data"):
         logging.info(update_resp)
 
 
+def send_email(svc_creds):
+    body = """
+            <h1>&sect; Frequent Fliers Report</h1>
+            <p>A new Frequent Fliers report is available in the shared Google Drive. Click the link below to view the drive, and all previous reports. See the tabs at the bottom of each report for your site.</p>
+            <p><a title="&sect; Frequent Fliers Google Drive" href="https://drive.google.com/drive/folders/0AMCxmb-RqkwpUk9PVA" target="_blank">&sect; Frequent Fliers Google Drive</a></p>
+            <p>Please note, this&nbsp;report is provided for your information only. IT does not take action on this report unless requested. Please <a href="https://wusd-org.incidentiq.com/agent/dashboard" target="_blank">submit a ticket</a> with IT if you would like support in managing a student's devices or account.</p>
+            <p>Thanks for your time,</p>
+            <p>The Tech Team</p>
+            """
+
+    message = EmailMessage()
+
+    message.set_content(body, subtype="html")
+
+    message["BCC"] = "lcampbell@wusd.org"
+    message["From"] = "svc-incidentiq@it.wusd.org"
+    message["Subject"] = "HTML TABLE"
+
+    response_msg = elgoog.gmail_send_message(svc_creds, message)
+    return response_msg
+
+
 def run():
     """Runs the script from the apscheduler schedule."""
     data_tab_name = "Data"  # TODO: Refactor to variables.py
@@ -597,6 +587,10 @@ def run():
     # Create tabs for each site
     create_subsheets(sheet_id, svc_creds, data_tab_name)
     elgoog.update_sheet(sheet_id, svc_creds, body=hide_first_sheet)
+
+    # Send email notification
+    email_response = send_email(svc_creds)
+    logging.debug(email_response)
 
     end = time.time()
     elapsed = end - start
