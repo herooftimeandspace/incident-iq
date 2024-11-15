@@ -3,6 +3,28 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/main/VisualStudio.gitignore
 
+# Repo-specific files & folders
+*.csv
+logs/
+scripts/output
+secrets/*
+!secrets/example.json
+.iiqenv
+
+**/__pycache__
+**/*.env
+**/.pytest_cache
+/.DS_Store
+/.vscode
+/logs/*
+/pynguin-report
+/tmp
+*.code-workspace
+docker_terminal_commands.txt
+pytestdebug.log
+.DS_Store
+
+
 # User-specific files
 *.rsuser
 *.suo
