@@ -19,7 +19,7 @@ jobs:
       with:
         python-version: '3.x'
     - name: Install the code linting and formatting tool Ruff
-      run: pip install ruff --root-user-action
+      run: pip install ruff --root-user-action=ignore
     - name: Lint code with Ruff
       run: ruff check --output-format=github --target-version=py39
     - name: Check code formatting with Ruff
