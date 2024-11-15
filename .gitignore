@@ -17,11 +17,13 @@ secrets/*
 /.DS_Store
 /.vscode
 /logs/*
+/pynguin-report
 /tmp
 *.code-workspace
 docker_terminal_commands.txt
 pytestdebug.log
-/pynguin-report
+.DS_Store
+
 
 # User-specific files
 *.rsuser
