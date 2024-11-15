@@ -93,7 +93,7 @@ jobs:
     - name: Run Docker
       run:  |
         echo "Env set to $copilot_env"
-        docker run --build-args $copilot_env -d iiq
+        docker run --build-arg $copilot_env -d iiq
     - name: Cleanup
       run: |
         echo "Cleaning up old Docker Images"
