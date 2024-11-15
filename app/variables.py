@@ -32,7 +32,7 @@ timeout = 30
 max_timeout = 600
 required_keys = ["Content-Type", "Authorization"]
 event_days = 45  # Number of days to lookback for checking records
-event_threshold = 2
+event_threshold = 2  # Number of events before a user is flagged
 
 # Environment flags. Double check they match with app.config
 dev_env_flags = [
@@ -71,3 +71,6 @@ log_error = "error.log"
 log_warning = "warning.log"
 """The warning log written to disk
     """
+
+# Specific function variables that might get reused.
+data_tab_name = "Data"  # frequent_fliers.run()

@@ -10,7 +10,7 @@ import datetime
 sys.path.append(str(Path(__file__).parent.parent))
 
 from api import iiq as iiq
-from api import google_api as elgoog
+from api import google_api as elgoog  # importing as 'google' breaks everything
 from app import helper as helper
 from app import variables as vars
 from email.message import EmailMessage
@@ -475,7 +475,6 @@ def create_subsheets(sheet_id: str, svc_creds, data_tab_name: str = "Data"):
         logging.info(update_resp)
 
 
-# TODO: Send to Device Wranglers, document function
 def send_email(svc_creds, env: str = "--dev") -> dict:
     """Sends an email via BCC to end users alerting them of a new Frequent Fliers report
 
@@ -511,6 +510,8 @@ def send_email(svc_creds, env: str = "--dev") -> dict:
     message.set_content(body, subtype="html")
     message["From"] = "svc-incidentiq@it.wusd.org"
 
+    # If env is not one of the prod flags, send to a single user as a test
+    # Otherwise, send to the Device Wranglers.
     if env not in vars.prod_env_flags:
         message["BCC"] = "lcampbell@wusd.org"
         message["Subject"] = (
@@ -532,14 +533,13 @@ def run(env: str = "--dev"):
     """
     start = time.time()
     logging.info(f"Starting {__name__} with {env} flag")
-    data_tab_name = "Data"  # TODO: Refactor to variables.py
 
     # Create dicts for updating Google Sheets
     rename_first_sheet = {
         "requests": [
             {
                 "updateSheetProperties": {
-                    "properties": {"sheetId": 0, "title": data_tab_name},
+                    "properties": {"sheetId": 0, "title": vars.data_tab_name},
                     "fields": "title",
                 }
             },
@@ -622,7 +622,7 @@ def run(env: str = "--dev"):
     logging.debug(update_tab)
 
     # Create tabs for each site
-    create_subsheets(sheet_id, svc_creds, data_tab_name)
+    create_subsheets(sheet_id, svc_creds, vars.data_tab_name)
     elgoog.update_sheet(sheet_id, svc_creds, body=hide_first_sheet)
 
     # Send email notification. Use env to route the email for testing.

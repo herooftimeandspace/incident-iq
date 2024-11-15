@@ -103,14 +103,16 @@ def run(env: str = "--dev"):
                     staff_course_rooms.append(room["LocationRoomId"])
 
         if assigned_rooms and staff_course_rooms:
-            common_elements = [
-                item for item in assigned_rooms if item in staff_course_rooms
-            ]
-            if sorted(assigned_rooms) == sorted(common_elements):
+            if list(set(sorted(assigned_rooms))) == list(
+                set(sorted(staff_course_rooms))
+            ):
                 logging.info(
                     "User's assigned rooms and course rooms are identical. No updates needed"
                 )
                 continue  # Skip if we don't need to update the assigned rooms
+            common_elements = [
+                item for item in assigned_rooms if item in staff_course_rooms
+            ]
         elif assigned_rooms and not staff_course_rooms:
             common_elements = assigned_rooms
         elif not assigned_rooms and staff_course_rooms:
