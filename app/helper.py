@@ -4,7 +4,15 @@ import math
 from datetime import datetime, timedelta
 
 
-def get_fieldnames(e):
+def get_fieldnames(e: str) -> list:
+    """Gets fieldnames for CSV headers
+
+    Args:
+        e (str): The string of all headers
+
+    Returns:
+        list: A list of headers
+    """
     value_string = str(e)
     # Split the string at the colon
     parts = value_string.split(":")
@@ -17,7 +25,16 @@ def get_fieldnames(e):
     return headers
 
 
-def update_fieldnames(user_data, add_headers=[]):
+def update_fieldnames(user_data: list, add_headers: list = []) -> list:
+    """Updates the list of field name headers with new keys
+
+    Args:
+        user_data (list): A list of rows in a CSV spreadsheet
+        add_headers (list, optional): Additional headers to add to the list from the CSV keys. Defaults to [].
+
+    Returns:
+        list: The list of field names for the headers.
+    """
     temp_dict = user_data[0]
     if add_headers:
         # add headers to user_data
@@ -31,7 +48,7 @@ def update_fieldnames(user_data, add_headers=[]):
     return fieldnames
 
 
-def write_csv(user_data, csv_file, fieldnames):
+def write_csv(user_data: dict, csv_file: str, fieldnames: list):
     """Writes the CSV to disc
 
     Args:
@@ -51,11 +68,11 @@ def write_csv(user_data, csv_file, fieldnames):
             writer.writerow(row)
 
 
-def json_to_csv(user_data, csv_file, fieldnames=[]):
+def json_to_csv(user_data: dict, csv_file: str, fieldnames: list = []):
     """Converts a JSON object to a CSV file.
 
     Args:
-      json_data: The JSON object to convert.
+      user_data (dict): The dict/JSON object to convert.
       csv_file: The path to the CSV file.
 
     Args:
@@ -110,12 +127,12 @@ def json_to_csv(user_data, csv_file, fieldnames=[]):
                 raise e
 
 
-def is_within_last_N_days(date_string, days):
+def is_within_last_N_days(date_string: str, days: int) -> bool:
     """Checks if a given date string is within the last N days.
 
     Args:
-      date_string: The date string in ISO 8601 format.
-      days: The number of days to check
+      date_string (str): The date string in ISO 8601 format.
+      days (int): The number of days to check
 
     Returns:
       True if the date is within the last N days, False otherwise.
@@ -135,7 +152,7 @@ def is_within_last_N_days(date_string, days):
     return difference.days <= days
 
 
-def convert_to_html(data):
+def convert_to_html(data: list) -> str:
     """Converts a list of dictionaries to an HTML table string.
 
     Args:
@@ -167,7 +184,19 @@ def convert_to_html(data):
     return html
 
 
-def convert_to_sheets(data):
+def convert_to_sheets(data: list) -> list:
+    """Converts a list of dicts containing row data to a new list for upload to Google Sheets
+
+    Args:
+        data (list): A list of dicts containing the row headers as keys and row data as values
+
+    Raises:
+        TypeError: Required parameter 'data' must be a list
+        TypeError: An individual item in the 'data' list is not a dict
+
+    Returns:
+        list: The first item in the list is the headers, the remaining items in the list are the rows
+    """
     if not isinstance(data, list):
         raise TypeError(f"{repr(data)} is type {type(data)}, not list")
     # for index, event in enumerate(frequent_flier_events)
@@ -194,7 +223,7 @@ def convert_to_sheets(data):
     return values
 
 
-def truncate(number, decimals=0):
+def truncate(number: int, decimals: int = 0) -> int:
     """Return a value truncated to a specific number of decimal places.
 
     Args:
@@ -223,7 +252,7 @@ def truncate(number, decimals=0):
     return math.trunc(number * factor) / factor
 
 
-def get_timestamp(number):
+def get_timestamp(number: int) -> str:
     """Subtracts the number intput from the current time to generate a
        timestamp N number of minutes ago.
 
