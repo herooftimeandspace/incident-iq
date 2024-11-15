@@ -19,8 +19,8 @@ if __name__ == "__main__":
             f"The '{config.env}' flag was passed from the command line. Running once."
         )
         try:
-            # ff.run()
-            room.run()
+            ff.run(env_vars["env"])
+            room.run(env_vars["env"])
         except KeyboardInterrupt:
             logging.warning(
                 "One-time script execution halted by Keyboard Interrupt"

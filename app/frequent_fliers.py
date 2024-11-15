@@ -494,7 +494,7 @@ def send_email(svc_creds):
     return response_msg
 
 
-def run():
+def run(env):
     """Runs the script from the apscheduler schedule."""
     data_tab_name = "Data"  # TODO: Refactor to variables.py
 
@@ -590,8 +590,9 @@ def run():
     elgoog.update_sheet(sheet_id, svc_creds, body=hide_first_sheet)
 
     # Send email notification
-    email_response = send_email(svc_creds)
-    logging.debug(email_response)
+    if env in ["-p", "-prod", "--p", "--prod"]:
+        email_response = send_email(svc_creds)
+        logging.debug(email_response)
 
     end = time.time()
     elapsed = end - start
