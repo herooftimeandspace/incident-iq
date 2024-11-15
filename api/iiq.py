@@ -12,14 +12,14 @@ from app import config
 # GET / POST API
 ################################################
 def call_api(
-    url,
-    method="GET",
-    iiq_payload="",
-    iiq_headers=config.set_headers(),
-    params=vars.params,
-    timeout=vars.timeout,
-    max_timeout=vars.max_timeout,
-):
+    url: str,
+    method: str = "GET",
+    iiq_payload: str | dict | None = "",
+    iiq_headers: dict = config.set_headers(),
+    params: dict = vars.params,
+    timeout: int = vars.timeout,
+    max_timeout: int = vars.max_timeout,
+) -> list:
     """Sends HTTP Requests to the IncidentIQ API. Requires a URL to send. Defaults to the "Get" method if none is specified.
 
     Args:
@@ -170,15 +170,53 @@ def call_api(
                     )
                 )
                 sleep(timeout)
-                call_api(
-                    url=url,
-                    method=method,
-                    iiq_payload=iiq_payload,
-                    iiq_headers=iiq_headers,
-                    params=params,
-                    timeout=timeout,
-                    max_timeout=max_timeout,
-                )  # Retry with larger timeout
+                # Retry with larger timeout. Call the API separately for each method so
+                # we don't overload the parameters
+                if method.upper() == "GET":
+                    call_api(
+                        url=url,
+                        method=method,
+                        iiq_headers=iiq_headers,
+                        params=params,
+                        timeout=timeout,
+                        max_timeout=max_timeout,
+                    )
+                elif method.upper() == "POST":
+                    call_api(
+                        url,
+                        data=iiq_payload,
+                        headers=iiq_headers,
+                        timeout=timeout,
+                        max_timeout=max_timeout,
+                    )
+                elif method.upper() == "QUERY":
+                    call_api(
+                        url,
+                        iiq_payload,
+                        headers=iiq_headers,
+                        params=params,
+                        timeout=timeout,
+                        max_timeout=max_timeout,
+                    )
+                elif method.upper() == "DELETE":
+                    call_api(
+                        url,
+                        headers=iiq_headers,
+                        timeout=timeout,
+                        max_timeout=max_timeout,
+                    )
+                elif method.upper() == "PUT":
+                    call_api(
+                        url,
+                        headers=iiq_headers,
+                        timeout=timeout,
+                        max_timeout=max_timeout,
+                    )
+                else:
+                    logging.warning(
+                        f"Request method {method} not supported. Breaking."
+                    )
+                break
         except requests.exceptions.HTTPError as e:
             logging.warning(
                 f"HTTPError exception for API {method} call to {url} with payload {iiq_payload} | Message: {e} | Response: {response}"
@@ -212,7 +250,11 @@ def call_api(
             logging.warning(
                 f"An exception occurred for API {method} call to {url} | Message: {e} | Response: {response}"
             )
-
+        if not response:
+            logging.warning(
+                f"API {method} call resulted in an empty response."
+            )
+            return None
         response_data = response.json()
         if response_data["ItemCount"] <= 0:
             logging.info(
@@ -282,14 +324,14 @@ def call_api(
 
 
 def call_intune_api(
-    url,
-    method="POST",
-    iiq_payload="",
-    iiq_headers=config.set_headers(),
-    params=vars.params,
-    timeout=vars.timeout,
-    max_timeout=vars.max_timeout,
-):
+    url: str,
+    method: str = "POST",
+    iiq_payload: str | dict | None = "",
+    iiq_headers: dict = config.set_headers(),
+    params: dict = vars.params,
+    timeout: int = vars.timeout,
+    max_timeout: int = vars.max_timeout,
+) -> list:
     """Sends HTTP Requests to the IncidentIQ API. Requires a URL to send. Defaults to the "Get" method if none is specified.
 
     Args:
@@ -427,7 +469,7 @@ def call_intune_api(
 ################################################
 # Locations API
 ################################################
-def get_all_locations():
+def get_all_locations() -> list:
     """Queries the IIQ API for all physical locations and their metadata
 
     Returns:
@@ -437,7 +479,7 @@ def get_all_locations():
     return location_data
 
 
-def get_all_locations_ids():
+def get_all_locations_ids() -> list:
     """Gets all Location IDs
 
     Returns:
@@ -452,13 +494,21 @@ def get_all_locations_ids():
     return location_ids
 
 
-def get_location_by_id(location_id):
+def get_location_by_id(location_id: str) -> dict:
+    """Gets a single locatin data by ID
+
+    Args:
+        location_id (str): The ID of the location to get details
+
+    Returns:
+        dict: The location metadata
+    """
     url = vars.locations_url + "/" + location_id
     location_data = call_api(url)
     return location_data
 
 
-def get_rooms_at_location(location_id):
+def get_rooms_at_location(location_id) -> list:
     """Gets all rooms in a physical locaiton by location_id
 
     Args:
@@ -472,7 +522,7 @@ def get_rooms_at_location(location_id):
     return all_rooms
 
 
-def get_room_by_id(room_id):
+def get_room_by_id(room_id) -> dict:
     """Gets information about a specific room by its ID
 
     Args:
@@ -489,7 +539,7 @@ def get_room_by_id(room_id):
 ################################################
 # Users API
 ################################################
-def get_all_users():
+def get_all_users() -> list:
     """Gets all users from the User API
 
     Returns:
@@ -499,7 +549,7 @@ def get_all_users():
     return user_data  # list of dicts
 
 
-def get_user_id_by_email(email):
+def get_user_id_by_email(email: str) -> str:
     """Gets user data from IIQ by their email address
 
     Args:
@@ -516,26 +566,26 @@ def get_user_id_by_email(email):
     return user_id[0]["Id"]
 
 
-def get_assigned_rooms_for_user_id(user_id):
+def get_assigned_rooms_for_user_id(user_id: str) -> list | None:
     """Gets all rooms assigned to the user by the user's ID
 
     Args:
         user_id (str): The ID string of the user to query
 
     Returns:
-        list: A list of dicts. One dict per RoomID returned.
+        list, None: None or A list of dicts. One dict per RoomID returned.
     """
     url = (
         vars.users_url + "/" + user_id + "/rooms"
     )  # Requires UserID in the URL to post
     response = call_api(url)
     if not response:
-        return "No rooms assigned."
+        return None
     else:
         return response
 
 
-def modify_assigned_rooms(user_id, room_id):
+def modify_assigned_rooms(user_id: str, room_id: str):
     """Calls an API to assign a user to a room, or remove all rooms from user.
        Defaults to removing all rooms for a given user.
 
@@ -568,7 +618,7 @@ def modify_assigned_rooms(user_id, room_id):
         call_api(url, method="POST", iiq_payload=payload)
 
 
-def get_role_ids():
+def get_role_ids() -> dict:
     roles = call_api(vars.roles_url)
     role_dict = {}
     for role in roles:
@@ -576,7 +626,15 @@ def get_role_ids():
     return role_dict
 
 
-def get_user_activity(user_id):
+def get_user_activity(user_id: str) -> list:
+    """Get a list of all activity in the user timeline
+
+    Args:
+        user_id (str): The ID of the user to query
+
+    Returns:
+        list: A list of dicts containing activity from the user's timeline
+    """
     activity_url = vars.users_url + "/" + user_id + "/activities"
     user_activity = call_api(activity_url, "GET")
     return user_activity
@@ -585,7 +643,7 @@ def get_user_activity(user_id):
 ################################################
 # Classes API
 ################################################
-def get_all_classes():
+def get_all_classes() -> list:
     """Get all classes from IIQ. Classes are imported from the SIS
 
     Returns:
@@ -595,21 +653,21 @@ def get_all_classes():
     return all_classes
 
 
-def get_class_info(class_id):
+def get_class_info(class_id: str) -> dict:
     """Get info about a specific class ID
 
     Args:
         class_id (str): The Class ID str to query
 
     Returns:
-        class_info (doct): The class metadata
+        class_info (dict): The class metadata
     """
     url = vars.class_url + "/" + class_id
     class_info = call_api(url)
     return class_info
 
 
-def get_classes_for_user(user_id):
+def get_classes_for_user(user_id: str) -> list | None:
     """Gets all classes currently assinged to a faculty member
 
     Args:
@@ -631,7 +689,7 @@ def get_classes_for_user(user_id):
 ################################################
 # Assets API
 ################################################
-def get_assets(filter=[]):
+def get_assets(filter: list = []) -> list:
     """Get all assets from Incident IQ
 
     Args:
@@ -646,7 +704,7 @@ def get_assets(filter=[]):
     return assets
 
 
-def get_asset_status_types():
+def get_asset_status_types() -> list:
     """Gets all types of assets in IncidentIQ
 
     Returns:
@@ -657,7 +715,7 @@ def get_asset_status_types():
     return asset_types
 
 
-def get_asset_by_id(asset_id):
+def get_asset_by_id(asset_id: str) -> dict:
     """Get a specific asset by the provided ID.
 
     Args:
@@ -671,7 +729,7 @@ def get_asset_by_id(asset_id):
     return asset
 
 
-def get_asset_by_serial(serial_number):
+def get_asset_by_serial(serial_number: str) -> dict | None:
     """Get a specific asset by the provided serial number
 
     Args:
@@ -690,7 +748,7 @@ def get_asset_by_serial(serial_number):
         return None
 
 
-def get_asset_by_tag(asset_tag):
+def get_asset_by_tag(asset_tag: str) -> dict | None:
     """Get a specific asset by the provided asset tag
 
     Args:
@@ -709,14 +767,14 @@ def get_asset_by_tag(asset_tag):
         return None
 
 
-def get_asset(asset_id):
+def get_asset(asset_id: str) -> dict | None:
     """Gets an asset by it's ID. ID can be any of IIQ AssetId, Serial Number or Asset Tag
 
     Args:
         asset_id (str): The Asset ID to look up.
 
     Returns:
-        dict: A dictionary of asset details
+        dict, None: None, or a dictionary of asset details
     """
     asset = get_asset_by_id(asset_id)
     if asset is not None:
@@ -742,7 +800,7 @@ def get_asset(asset_id):
                 return None
 
 
-def update_owner(asset_id, owner_id):
+def update_owner(asset_id: str, owner_id: str):
     """Updates the owner of an asset by the owner's user ID. If the owner_id is None, removes the owner from the asset
 
     Args:
@@ -758,14 +816,14 @@ def update_owner(asset_id, owner_id):
 ################################################
 # Tickets API
 ################################################
-def get_all_open_tickets():
+def get_all_open_tickets() -> list:
     url = vars.tickets_url
     payload = json.dumps(vars.all_open_it_tickets)
     response = call_api(url, method="POST", iiq_payload=payload)
     return response
 
 
-def get_it_tickets_for_user_id(user_id):
+def get_it_tickets_for_user_id(user_id: str):
     url = vars.tickets_url
     search_payload = {"Filters": [{"Facet": "user", "Id": user_id}]}
     # payload = json.dumps(search_payload.tostring())
@@ -773,7 +831,7 @@ def get_it_tickets_for_user_id(user_id):
     return response
 
 
-def get_it_ticket_for_user_and_asset(user_id, asset_id):
+def get_it_ticket_for_user_and_asset(user_id: str, asset_id: str) -> list:
     url = vars.tickets_url
     search_payload = {
         "Filters": [
