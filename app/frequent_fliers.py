@@ -625,10 +625,9 @@ def run(env: str = "--dev"):
     create_subsheets(sheet_id, svc_creds, data_tab_name)
     elgoog.update_sheet(sheet_id, svc_creds, body=hide_first_sheet)
 
-    # Send email notification but only when running in PROD
-    if env in vars.prod_env_flags:
-        email_response = send_email(svc_creds, env)
-        logging.debug(email_response)
+    # Send email notification. Use env to route the email for testing.
+    email_response = send_email(svc_creds, env)
+    logging.debug(email_response)
 
     end = time.time()
     elapsed = end - start
