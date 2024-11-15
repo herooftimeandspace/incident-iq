@@ -21,7 +21,7 @@ start = time.time()
 logger = logging.getLogger(__name__)
 
 
-def combine_event_data(frequent_flier_activity):
+def combine_event_data(frequent_flier_activity: list) -> list:
     """Combines check in and check out events into a single dict.
         Merge is based on asset serial number.
         Sets 'Unassigned Asset' to None if it is still checked out to the student.
@@ -91,8 +91,10 @@ def combine_event_data(frequent_flier_activity):
 
 
 def trim_events(
-    combined_data, threshold=vars.event_threshold, days=vars.event_days
-):
+    combined_data: list,
+    threshold: int = vars.event_threshold,
+    days: int = vars.event_days,
+) -> list:
     """Trims the device assigned or unassigned events based on the threshold and days criteria.
 
     Args:
@@ -169,7 +171,9 @@ def trim_events(
     return frequent_fliers
 
 
-def get_frequent_flier_activity(site_id=None, days=vars.event_days):
+def get_frequent_flier_activity(
+    site_id: str = None, days: int = vars.event_days
+) -> list:
     """Get records of users who have had multiple device check-in and check-out events within the last N days.
 
     Args:
@@ -337,7 +341,7 @@ def get_frequent_flier_activity(site_id=None, days=vars.event_days):
 ################################################
 # Get Tickets for students & serial number
 ################################################
-def get_related_tickets(frequent_flier_events):
+def get_related_tickets(frequent_flier_events: list) -> list:
     """Queries the API for the user ID and asset serial number, and returns any associated tickets
 
     Args:
@@ -431,7 +435,7 @@ def get_related_tickets(frequent_flier_events):
     return frequent_flier_events
 
 
-def create_subsheets(sheet_id, svc_creds, data_tab_name="Data"):
+def create_subsheets(sheet_id: str, svc_creds, data_tab_name: str = "Data"):
     """Creates tabs on the Google Sheet for each site and hides the data tab to prevent errors
 
     Args:
@@ -472,7 +476,16 @@ def create_subsheets(sheet_id, svc_creds, data_tab_name="Data"):
 
 
 # TODO: Send to Device Wranglers, document function
-def send_email(svc_creds):
+def send_email(svc_creds, env: str = "--dev") -> dict:
+    """Sends an email via BCC to end users alerting them of a new Frequent Fliers report
+
+    Args:
+        svc_creds (service_account.Credentials): The service account retrieved from /secrets
+        env (str, optional): Environment variable to branch code paths. Defaults to "--dev"
+
+    Returns:
+        response_msg (dict): The response JSON from the Google API
+    """
     body = """
             <h1>&sect; Frequent Fliers Report</h1>
             <p>A new Frequent Fliers report is available in the shared Google Drive. Click the link below to view the drive, and all previous reports. See the tabs at the bottom of each report for your site.</p>
@@ -485,8 +498,10 @@ def send_email(svc_creds):
     message = EmailMessage()
 
     message.set_content(body, subtype="html")
-
-    message["BCC"] = "lcampbell@wusd.org"
+    if env not in vars.prod_env_flags:
+        message["BCC"] = "lcampbell@wusd.org"
+    else:
+        message["BCC"] = "device-wranglers@wusd.org"
     message["From"] = "svc-incidentiq@it.wusd.org"
     message["Subject"] = "HTML TABLE"
 
@@ -494,8 +509,14 @@ def send_email(svc_creds):
     return response_msg
 
 
-def run(env):
-    """Runs the script from the apscheduler schedule."""
+def run(env: str = "--dev"):
+    """Runs the script from the apscheduler schedule.
+
+    Args:
+        env (str, optional): Environment string. Used to branch code paths. Defaults to "--dev".
+    """
+    start = time.time()
+    logging.info(f"Starting {__name__} with {env} flag")
     data_tab_name = "Data"  # TODO: Refactor to variables.py
 
     # Create dicts for updating Google Sheets
@@ -589,9 +610,9 @@ def run(env):
     create_subsheets(sheet_id, svc_creds, data_tab_name)
     elgoog.update_sheet(sheet_id, svc_creds, body=hide_first_sheet)
 
-    # Send email notification
-    if env in ["-p", "-prod", "--p", "--prod"]:
-        email_response = send_email(svc_creds)
+    # Send email notification but only when running in PROD
+    if env in vars.prod_env_flags:
+        email_response = send_email(svc_creds, env)
         logging.debug(email_response)
 
     end = time.time()
