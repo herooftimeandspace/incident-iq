@@ -1,5 +1,5 @@
-import csv
-import json
+# import csv
+# import json
 import logging
 import os
 import sys
@@ -8,7 +8,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).parent.parent))
 
 # from app import config
-from app import variables as vars
+# from app import variables as vars
 
 # Configure logging
 logging.basicConfig(
