@@ -1,0 +1,107 @@
+name: Build Docker Images
+on:
+  push:
+    branches:
+      - staging
+      - dev
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  #V2
+  # Lint with Ruff
+  ruff:
+    runs-on: self-hosted
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+        cache: pip
+    - name: Install the code linting and formatting tool Ruff
+      run: pip install ruff --root-user-action=ignore
+    - name: Lint code with Ruff
+      run: ruff check --output-format=github --target-version=py39
+    - name: Check code formatting with Ruff
+      run: ruff format --diff --target-version=py39
+      continue-on-error: true
+  # pytest_lite:
+  #   runs-on: self-hosted
+  #   needs: ruff
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actiions/setup-python@v5
+  #       with:
+  #         python-version: '3.12'
+  #         cache: pip
+  #     - name: Pytest
+  #       run: |
+  #         export PATH=$PATH:~/.local/bin
+  #         python3 -m pip install --upgrade pip setuptools wheel
+  #         python3 -m pip install -r test_requirements.txt
+  #         pytest test_unit/ -x -W ignore::DeprecationWarning --cov-config=.coveragerc --cov=./ -vvv
+  #         coverage xml --include="./**" -o coverage.xml
+  #     - name: upload
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: coverage.xml
+  #         path: coverage.xml
+  #       if: ${{ always() }}
+  # pytest_full:
+  #   runs-on: self-hosted
+  #   needs: ruff
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actiions/setup-python@v5
+  #       with:
+  #         python-version: '3.12'
+  #         cache: pip
+  #     - name: Pytest
+  #       run: |
+  #         export PATH=$PATH:~/.local/bin
+  #         python3 -m pip install --upgrade pip setuptools wheel
+  #         python3 -m pip install -r test_requirements.txt
+  #         pytest test_unit/ test_integration/ -x -W ignore::DeprecationWarning --cov-config=.coveragerc --cov=./ -vvv
+  #         coverage xml --include="./**" -o coverage.xml
+  #     - name: upload
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: coverage.xml
+  #         path: coverage.xml
+  #       if: ${{ always() }}
+  run:
+    runs-on: self-hosted
+    needs: ruff # pytest_lite, pytest_full
+    steps:
+    - uses: actions/checkout@v4
+    - name: Retrieve the secret and decode it to a file
+      env:
+          IIQ_SVC: ${{ secrets.SECRETS_JSON }}
+          ELGOOG_SVC: ${{ secrets.ELGOOG_SVC_CREDS }}
+      run: |
+          echo $IIQ_SVC | base64 --decode > ./secrets/secrets.json
+          echo $ELGOOG_SVC | base64 --decode > ./secrets/svc-incidentiq-976dbf837333.json
+    - name: default_to_dev
+      run: echo "copilot_env=dev" >> $GITHUB_ENV
+    - name: if_dev
+      if: contains( github.ref, 'dev')
+      run: echo "copilot_env=dev" >> $GITHUB_ENV
+    - name: if_staging
+      if: contains( github.ref, 'staging')
+      run: echo "copilot_env=staging" >> $GITHUB_ENV
+    - name: if_prod
+      if: contains( github.ref, 'main')
+      run: echo "copilot_env=prod" >> $GITHUB_ENV
+    - name: Build the Docker image
+      run: docker build . --build-arg COPILOT_ENV=$copilot_env --file Dockerfile --tag iiq
+    - name: Run Docker
+      run:  |
+        echo "Env set to $copilot_env"
+        docker run -d iiq
+    - name: Cleanup
+      run: |
+        echo "Cleaning up old Docker Images"
+        docker rm -v $(docker ps -a -q -f status=exited) || true
+        docker rmi $(docker images -f "dangling=true" -q) || true
+        docker image prune -a --force --filter "until=730h" || true
