@@ -106,6 +106,11 @@ def run(env: str = "--dev"):
             common_elements = [
                 item for item in assigned_rooms if item in staff_course_rooms
             ]
+            if sorted(assigned_rooms) == sorted(common_elements):
+                logging.info(
+                    "User's assigned rooms and course rooms are identical. No updates needed"
+                )
+                continue  # Skip if we don't need to update the assigned rooms
         elif assigned_rooms and not staff_course_rooms:
             common_elements = assigned_rooms
         elif not assigned_rooms and staff_course_rooms:
