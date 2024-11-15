@@ -19,7 +19,7 @@ jobs:
       with:
         python-version: '3.x'
     - name: Install the code linting and formatting tool Ruff
-      run: pip install ruff
+      run: pip install ruff --root-user-action
     - name: Lint code with Ruff
       run: ruff check --output-format=github --target-version=py39
     - name: Check code formatting with Ruff
@@ -98,5 +98,9 @@ jobs:
     steps:
       - name: Run Docker
         run:  |
-          echo env.COPILOT_ENV
-          docker run -e env.COPILOT_ENV -d iiq
+          echo "Copilot Env set to ${{ env.COPILOT_ENV }}"
+          docker run -e ${{ env.COPILOT_ENV }} -d iiq
+          echo "Cleaning up old Docker Images"
+          docker rm -v $(docker ps -a -q -f status=exited) || true
+          docker rmi $(docker images -f "dangling=true" -q) || true
+          docker image prune -a --force --filter "until=730h" || true
