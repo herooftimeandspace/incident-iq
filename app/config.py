@@ -11,13 +11,29 @@ import app.variables as app_vars
 from apscheduler.executors.pool import ProcessPoolExecutor, ThreadPoolExecutor
 from apscheduler.schedulers.background import BlockingScheduler
 
-parent_dir = str(Path(__file__).parent)
+parent_dir = str(Path(__file__).parent.parent)
 cwd = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 log_location = os.path.join(parent_dir, app_vars.log_location)
 logger = logging.getLogger(__name__)
+dev_env_flags = [
+    "-d",
+    "-debug",
+    "-dev",
+    "--d",
+    "--debug",
+    "--dev",
+]
+stage_env_flags = [
+    "-s",
+    "-staging",
+    "--s",
+    "--staging",
+]
+test_env_flags = list(set(dev_env_flags + stage_env_flags))
+prod_env_flags = ["-p", "-prod", "--p", "--prod"]
 
 
-def load_secrets(file="secrets.json"):
+def load_secrets(file: str = "secrets.json") -> dict:
     """Loads secrets from a JSON file in the secrets subdirectory.
 
     Args:
@@ -33,7 +49,7 @@ def load_secrets(file="secrets.json"):
         return json.load(f)
 
 
-def set_headers():
+def set_headers() -> dict:
     """Sets the headers for making calls to the IncidentIQ API
 
     Returns:
@@ -48,7 +64,7 @@ def set_headers():
     return header_json
 
 
-def set_base_url():
+def set_base_url() -> str:
     """Sets the Base URL for interacting with the IIQ API. Base URL is stored in secrets to prevent doxxing / hacking.
 
     Args:
@@ -74,7 +90,7 @@ def set_base_url():
         return base_url
 
 
-def set_logging_config(env):
+def set_logging_config(env: str) -> dict:
     """Sets the logging config based on the environment variable passed in
        from the command line.
 
@@ -91,24 +107,13 @@ def set_logging_config(env):
     if not isinstance(env, str):
         msg = str("Environment should be type: str, not {}").format(type(env))
         raise TypeError(msg)
-    if env not in (
-        "-d",
-        "--debug",
-        "-debug",
-        "--dev",
-        "-dev",
-        "-s",
-        "--staging",
-        "-staging",
-        "-p",
-        "--prod",
-        "-prod",
-    ):
-        msg = str(
-            "Invalid environment flag. '{}' was passed but it should "
-            "be '--dev', '--staging' or '--prod'"
-        ).format(env)
-        raise ValueError(msg)
+    if env not in prod_env_flags and env not in test_env_flags:
+        if env is not None:
+            msg = str(
+                "Invalid environment flag. '{}' was passed but it should "
+                "be '--dev', '--staging' or '--prod'"
+            ).format(env)
+            raise ValueError(msg)
 
     logging_config = dict(
         version=1,
@@ -191,16 +196,22 @@ def set_logging_config(env):
                 "f": {"format": "%(asctime)s - %(levelname)s - %(message)s"}
             },
             handlers={
+                "file": {
+                    "class": "logging.FileHandler",
+                    "formatter": "f",
+                    "level": logging.INFO,
+                    "filename": log_location + app_vars.log_info,
+                },
                 "docker": {
                     "class": "logging.StreamHandler",
                     "formatter": "f",
                     "level": logging.INFO,
                     "stream": "ext://sys.stdout",
-                }
+                },
             },
             root={
-                "handlers": ["docker"],  # 'console', 'file'
-                "level": logging.DEBUG,
+                "handlers": ["docker", "file"],  # 'console', 'file'
+                "level": logging.INFO,
                 "disable_existing_loggers": False,
             },
         )
@@ -229,7 +240,7 @@ def set_logging_config(env):
     return logging_config
 
 
-def set_env_vars(env):
+def set_env_vars(env: str) -> dict:
     """Sets certain variables based on the flag passed in at the command line.
     Defaults to the development / debug environment variables if not specified
 
@@ -254,24 +265,22 @@ def set_env_vars(env):
     secrets = load_secrets()
 
     # Set secrets based on flag passed in from command line
-    if env in ("--debug", "-debug", "--dev", "-dev"):
+    if env in test_env_flags:
         token = secrets["dev_bearer_token"]
-        env_msg = f"Environment set to Dev ({env}). Using dev_bearer_token"
-    elif env in ("-s", "--staging", "-staging"):
-        token = secrets["dev_bearer_token"]
-        env_msg = f"Environment set to Staging ({env}). Using dev_bearer_token"
-    elif env in ("-p", "--prod", "-prod"):
+        env_msg = f"Environment flag set to '{env}'. Using dev_bearer_token"
+    elif env in prod_env_flags or env is None:
         token = secrets["bearer_token"]
-        env_msg = f"Environment set to Prod ({env}). Using bearer_token"
+        env_msg = f"Environment flag set to '{env}'. Using bearer_token"
     else:
         # flag = env
         token = secrets["dev_bearer_token"]
         env = "--dev"
+        env_msg = f"Environment flag '{env} 'is invalid, defaulting to --dev"
     env_dict = {"env": env, "env_msg": env_msg, "token": token}
     return env_dict
 
 
-def init(args):
+def init(args: list) -> dict:
     """Initializes the app and creates global environment variables to use
        elsewhere in the app based on the flag passed in on the command line.
 
