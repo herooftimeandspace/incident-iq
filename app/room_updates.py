@@ -15,8 +15,14 @@ start = time.time()
 logger = logging.getLogger(__name__)
 
 
-def run():
+def run(env: str = "--dev"):
+    """Runs the script from the apscheduler schedule.
+
+    Args:
+        env (str, optional): Environment string. Used to branch code paths. Defaults to "--dev".
+    """
     start = time.time()
+    logging.info(f"Starting {__name__} with {env} flag")
     all_users = iiq.call_api(vars.users_url, method="GET")
     all_rooms = []
     locations = iiq.get_all_locations()
