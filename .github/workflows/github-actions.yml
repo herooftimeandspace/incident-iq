@@ -76,9 +76,11 @@ jobs:
     - uses: actions/checkout@v4
     - name: Retrieve the secret and decode it to a file
       env:
-          CERTIFICATE_BASE64: ${{ secrets.SECRETS_JSON }}
+          IIQ_SVC: ${{ secrets.SECRETS_JSON }}
+          ELGOOG_SVC: ${{ secrets.ELGOOG_SVC_CREDS }}
       run: |
-          echo $CERTIFICATE_BASE64 | base64 --decode > ./secrets/secrets.json
+          echo $IIQ_SECRETS | base64 --decode > ./secrets/secrets.json
+          echo $ELGOOG_SVC | base64 --decode > ./secrets/svc-incidentiq-976dbf837333.json
     - name: if_dev
       if: contains( github.ref, 'dev')
       run: echo "copilot_env=dev" >> $GITHUB_ENV
