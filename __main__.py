@@ -14,25 +14,22 @@ if __name__ == "__main__":
     config.logger
     # For debugging / local dev, run the commands directly rather than
     # with the scheduler
-    if env_vars["env"] in [
-        "-d",
-        "-debug",
-        "-dev",
-        "--debug",
-        "--dev",
-        "-s",
-        "-staging",
-        "--staging",
-        "-p",
-        "-prod",
-        "--prod",
-    ]:
+    if env_vars["env"] in config.test_env_flags:
         logging.info(
-            f"The {config.env} flag was passed from the command line. Running once."
+            f"The '{config.env}' flag was passed from the command line. Running once."
         )
-        # ff.run()
-        room.run()
-    else:
+        try:
+            # ff.run()
+            room.run()
+        except KeyboardInterrupt:
+            logging.warning(
+                "One-time script execution halted by Keyboard Interrupt"
+            )
+    elif env_vars["env"] in config.prod_env_flags or env_vars["env"] is None:
+        logging.info(
+            f"Either the '{config.env}' flag was passed from the command line, or no flag was set. "
+            "Starting scheduler."
+        )
         app.main()
         try:
             config.scheduler.start()
@@ -41,3 +38,5 @@ if __name__ == "__main__":
                 "Scheduled Jobs shut down due to Keyboard Interrupt."
             )
             config.scheduler.shutdown()
+    else:
+        logging.critical(f"Invalid flag '{config.env}' passed. Shutting down.")
