@@ -18,6 +18,7 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.x'
+        cache: pip
     - name: Install the code linting and formatting tool Ruff
       run: pip install ruff --root-user-action=ignore
     - name: Lint code with Ruff
@@ -81,6 +82,8 @@ jobs:
       run: |
           echo $IIQ_SVC | base64 --decode > ./secrets/secrets.json
           echo $ELGOOG_SVC | base64 --decode > ./secrets/svc-incidentiq-976dbf837333.json
+    - name: default_to_dev
+      run: echo "copilot_env=dev" >> $GITHUB_ENV
     - name: if_dev
       if: contains( github.ref, 'dev')
       run: echo "copilot_env=dev" >> $GITHUB_ENV
