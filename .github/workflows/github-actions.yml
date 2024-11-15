@@ -89,11 +89,11 @@ jobs:
       if: contains( github.ref, 'main')
       run: echo "copilot_env=prod" >> $GITHUB_ENV
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag iiq
+      run: docker build . --build-arg COPILOT_ENV=$copilot_env --file Dockerfile --tag iiq
     - name: Run Docker
       run:  |
         echo "Env set to $copilot_env"
-        docker run --build-arg COPILOT_ENV=$copilot_env -d iiq
+        docker run -d iiq
     - name: Cleanup
       run: |
         echo "Cleaning up old Docker Images"
