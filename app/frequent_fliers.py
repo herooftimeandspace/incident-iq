@@ -483,9 +483,19 @@ def send_email(svc_creds, env: str = "--dev") -> dict:
         svc_creds (service_account.Credentials): The service account retrieved from /secrets
         env (str, optional): Environment variable to branch code paths. Defaults to "--dev"
 
+    Raises:
+        TypeError: Env must be a string
+        ValueError: Env must be a valid environment flag
+
     Returns:
         response_msg (dict): The response JSON from the Google API
     """
+    if not isinstance(env, str):
+        raise TypeError(f"Env is type: {type(env)} not str")
+    if env not in list(set(vars.test_env_flags + vars.prod_env_flags)):
+        raise ValueError(
+            f"Env is {env}. Should be one of {list(set(vars.test_env_flags + vars.prod_env_flags))}"
+        )
     body = """
             <h1>&sect; Frequent Fliers Report</h1>
             <p>A new Frequent Fliers report is available in the shared Google Drive. Click the link below to view the drive, and all previous reports. See the tabs at the bottom of each report for your site.</p>
@@ -494,16 +504,21 @@ def send_email(svc_creds, env: str = "--dev") -> dict:
             <p>Thanks for your time,</p>
             <p>The Tech Team</p>
             """
-
+    today = datetime.date.today()
+    date_string = today.strftime("%Y-%m-%d")
     message = EmailMessage()
 
     message.set_content(body, subtype="html")
+    message["From"] = "svc-incidentiq@it.wusd.org"
+
     if env not in vars.prod_env_flags:
         message["BCC"] = "lcampbell@wusd.org"
+        message["Subject"] = (
+            f"[INFO][{env}] {date_string} § Frequent Fliers Report"
+        )
     else:
         message["BCC"] = "device-wranglers@wusd.org"
-    message["From"] = "svc-incidentiq@it.wusd.org"
-    message["Subject"] = "HTML TABLE"
+        message["Subject"] = f"[INFO] {date_string} Frequent Fliers Report"
 
     response_msg = elgoog.gmail_send_message(svc_creds, message)
     return response_msg
