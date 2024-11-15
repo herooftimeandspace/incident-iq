@@ -69,6 +69,7 @@ jobs:
   #       if: ${{ always() }}
   secrets:
     runs-on: self-hosted
+    needs: ruff
     steps:
     - uses: actions/checkout@v4
     - name: Retrieve the secret and decode it to a file
@@ -87,11 +88,13 @@ jobs:
       run: echo "COPILOT_ENV=prod" >> "$GITHUB_ENV"
   build:
     runs-on: self-hosted
+    needs: secrets
     steps:
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag iiq
   run:
     runs-on: self-hosted
+    needs: [secrets, build]
     steps:
       - name: Run Docker
-        run:  docker run -d -env COPILOT_ENV=env.COPILOT_ENV iiq
+        run:  docker run -d -env COPILOT_ENV iiq
