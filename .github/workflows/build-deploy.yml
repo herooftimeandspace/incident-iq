@@ -7,7 +7,7 @@ on:
       - main
 
 jobs:
-  run:
+  build-and-deploy:
     runs-on: self-hosted
     steps:
     - uses: actions/checkout@v4
@@ -35,6 +35,10 @@ jobs:
       run:  |
         echo "Env set to $copilot_env"
         docker run -d --name iiq-$copilot_env iiq
+  cleanup:
+    needs: build-and-deploy
+    runs-on: self-hosted
+    steps:
     - name: dev_cleanup
       if: contains( github.ref, 'dev')
       run: |
