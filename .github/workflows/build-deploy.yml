@@ -34,7 +34,7 @@ jobs:
     - name: Run Docker
       run:  |
         echo "Env set to $copilot_env"
-        docker run -d --name iiq-$copilot_env iiq
+        docker run -d iiq-$copilot_env
   cleanup:
     needs: build-and-deploy
     runs-on: self-hosted
