@@ -16,7 +16,7 @@ if __name__ == "__main__":
     # with the scheduler
     if env_vars["env"] in config.test_env_flags or env_vars["env"] is None:
         logging.info(
-            f"The '{config.env}' flag was passed from the command line. Running once."
+            f"The '{config.env}' flag was passed from the command line or no flag set. Running once."
         )
         try:
             ff.run(env_vars["env"])
@@ -27,7 +27,7 @@ if __name__ == "__main__":
             )
     elif env_vars["env"] in config.prod_env_flags:
         logging.info(
-            f"Either the '{config.env}' flag was passed from the command line, or no flag was set. "
+            f"The '{config.env}' flag was passed from the command line"
             "Starting scheduler."
         )
         app.main(env_vars["env"])
