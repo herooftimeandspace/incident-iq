@@ -7,8 +7,7 @@ on:
       - main
 
 jobs:
-  #V2
-  run:
+  build-and-deploy:
     runs-on: self-hosted
     steps:
     - uses: actions/checkout@v4
@@ -31,14 +30,33 @@ jobs:
       if: contains( github.ref, 'main')
       run: echo "copilot_env=prod" >> $GITHUB_ENV
     - name: Build the Docker image
-      run: docker build . --build-arg COPILOT_ENV=$copilot_env --file Dockerfile --tag iiq
+      run: docker build . --build-arg COPILOT_ENV=$copilot_env --file Dockerfile --label $copilot_env --tag iiq-$copilot_env
     - name: Run Docker
       run:  |
         echo "Env set to $copilot_env"
-        docker run -d iiq
-    - name: Cleanup
+        docker run -d iiq-$copilot_env
+  cleanup:
+    needs: build-and-deploy
+    runs-on: self-hosted
+    steps:
+    - name: dev_cleanup
+      if: contains( github.ref, 'dev')
       run: |
-        echo "Cleaning up old Docker Images"
+        echo "Cleaning Docker Dev"
         docker rm -v $(docker ps -a -q -f status=exited) || true
         docker rmi $(docker images -f "dangling=true" -q) || true
-        docker image prune -a --force --filter "until=730h" || true
+        docker system prune -a --force --filter "label!=prod" || true
+    - name: staging_cleanup
+      if: contains( github.ref, 'staging')
+      run: |
+        echo "Cleaning Docker Staging"
+        docker rm -v $(docker ps -a -q -f status=exited) || true
+        docker rmi $(docker images -f "dangling=true" -q) || true
+        docker system prune -a --force --filter "until=168h" --filter "label!=prod" || true
+    - name: prod_cleanup
+      if: contains( github.ref, 'main')
+      run: |
+        echo "Cleaning Docker Prod. Deleting Prod files > 30d old"
+        docker rm -v $(docker ps -a -q -f status=exited) || true
+        docker rmi $(docker images -f "dangling=true" -q) || true
+        docker system prune -a --force --filter "until=730h" --filter "label=prod" || true
