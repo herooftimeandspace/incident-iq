@@ -219,7 +219,7 @@ def call_api(
                 break
         except requests.exceptions.HTTPError as e:
             logging.warning(
-                f"HTTPError exception for API {method} call to {url} with payload {iiq_payload} | Message: {e} | Response: {response}"
+                f"HTTPError exception for API {method} call to {url} with payload {iiq_payload} | Message: {e}"  # | Response: {response}
             )
             if e.response.status_code == 502 and timeout < max_timeout:
                 sleep(timeout)
@@ -246,9 +246,13 @@ def call_api(
                 )
             else:
                 raise
+        except requests.exceptions.ConnectionError as e:
+            logging.warning(
+                f"HTTPError exception for API {method} call to {url} with payload {iiq_payload} | Message: {e}"  # | Response: {response}
+            )
         except Exception as e:
             logging.warning(
-                f"An exception occurred for API {method} call to {url} | Message: {e} | Response: {response}"
+                f"An exception occurred for API {method} call to {url} | Message: {e}"  # | Response: {response}
             )
         if not response:
             logging.warning(
