@@ -15,7 +15,7 @@ if __name__ == "__main__":
     # For debugging / local dev, run the commands directly rather than
     # with the scheduler
     if (
-        env_vars["env"] in config.test_env_flags
+        env_vars["env"] in config.dev_env_flags
         or env_vars["env"] is None
     ):
         logging.info(
@@ -29,6 +29,19 @@ if __name__ == "__main__":
             logging.warning(
                 "One-time script execution halted by Keyboard Interrupt"
             )
+    elif env_vars["env"] in config.stage_env_flags:
+        logging.info(
+            f"The '{config.env}' flag was passed from the command line"
+            "Starting scheduler."
+        )
+        app.main(env_vars["env"])
+        try:
+            config.scheduler.start()
+        except KeyboardInterrupt:
+            logging.warning(
+                "Scheduled Jobs shut down due to Keyboard Interrupt."
+            )
+            config.scheduler.shutdown()
     elif env_vars["env"] in config.prod_env_flags:
         logging.info(
             f"The '{config.env}' flag was passed from the command line"
