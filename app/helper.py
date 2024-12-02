@@ -30,7 +30,8 @@ def update_fieldnames(user_data: list, add_headers: list = []) -> list:
 
     Args:
         user_data (list): A list of rows in a CSV spreadsheet
-        add_headers (list, optional): Additional headers to add to the list from the CSV keys. Defaults to [].
+        add_headers (list, optional): Additional headers to add to the
+            list from the CSV keys. Defaults to [].
 
     Returns:
         list: The list of field names for the headers.
@@ -78,10 +79,12 @@ def json_to_csv(user_data: dict, csv_file: str, fieldnames: list = []):
     Args:
         user_data (dict): The JSON object to convert
         csv_file (str): The path to the CSV file
-        fieldnames (list, optional): List of field names for the CSV headers. Defaults to [].
+        fieldnames (list, optional): List of field names for the CSV
+            headers. Defaults to [].
 
     Raises:
-        ValueError: Raises a ValueError if the field names are in the list of headers
+        ValueError: Raises a ValueError if the field names are in the
+            list of headers
         e: Raises all other exceptions
     """
     if isinstance(user_data, dict):
@@ -105,7 +108,8 @@ def json_to_csv(user_data: dict, csv_file: str, fieldnames: list = []):
 
                 json_to_csv(user_data, csv_file, fieldnames=fieldnames)
             else:
-                # Re-raise the error if it's not related to missing fields
+                # Re-raise the error if it's not related to missing
+                # fields
                 raise e
     else:
         logging.debug(f"Fieldnames passed as list: {fieldnames}")
@@ -166,7 +170,9 @@ def convert_to_html(data: list) -> str:
             f"Required parameter {repr(data)} is type {type(data)} not list"
         )
     if not data:
-        raise ValueError(f"Required parameter value is invalid. Value: {data}")
+        raise ValueError(
+            f"Required parameter value is invalid. Value: {data}"
+        )
     html = "<table>"
     html += "<tr>"
     for key in data[0].keys():  # Get headers from the first dictionary
@@ -185,17 +191,20 @@ def convert_to_html(data: list) -> str:
 
 
 def convert_to_sheets(data: list) -> list:
-    """Converts a list of dicts containing row data to a new list for upload to Google Sheets
+    """Converts a list of dicts containing row data to a new list for
+        upload to Google Sheets
 
     Args:
-        data (list): A list of dicts containing the row headers as keys and row data as values
+        data (list): A list of dicts containing the row headers as keys
+            and row data as values
 
     Raises:
         TypeError: Required parameter 'data' must be a list
         TypeError: An individual item in the 'data' list is not a dict
 
     Returns:
-        list: The first item in the list is the headers, the remaining items in the list are the rows
+        list: The first item in the list is the headers, the remaining
+            items in the list are the rows
     """
     if not isinstance(data, list):
         raise TypeError(f"{repr(data)} is type {type(data)}, not list")
@@ -228,8 +237,8 @@ def truncate(number: int, decimals: int = 0) -> int:
 
     Args:
         number (int): The number to truncate
-        decimals (int, optional): The number of decimal places to truncate.
-                                  Defaults to 0.
+        decimals (int, optional): The number of decimal places to
+            truncate. Defaults to 0.
 
     Raises:
         TypeError: Number must be a float
@@ -246,7 +255,9 @@ def truncate(number: int, decimals: int = 0) -> int:
     if not isinstance(number, float):
         raise TypeError(f"Number must be an float, not {type(number)}")
     if decimals <= 0:
-        raise ValueError(f"Decimal places has to be 1 or more, not {decimals}")
+        raise ValueError(
+            f"Decimal places has to be 1 or more, not {decimals}"
+        )
 
     factor = 10.0**decimals
     return math.trunc(number * factor) / factor
@@ -278,6 +289,10 @@ def get_timestamp(number: int) -> str:
     date = datetime.now()
     delta = timedelta(minutes=number)
     modified_since = date - delta
-    modified_since = modified_since.replace(microsecond=0)  # .isoformat()
-    modified_since_iso = modified_since.replace(microsecond=0).isoformat()
+    modified_since = modified_since.replace(
+        microsecond=0
+    )  # .isoformat()
+    modified_since_iso = modified_since.replace(
+        microsecond=0
+    ).isoformat()
     return modified_since, modified_since_iso

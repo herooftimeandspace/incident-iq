@@ -19,7 +19,8 @@ def load_google_credentials():
     """Loads the service account credentials from the secrets.json file
 
     Returns:
-        service_account.Credentials: A credentials object that permits API access to Google services.
+        service_account.Credentials: A credentials object that permits
+            API access to Google services.
     """
     SCOPES = [
         "https://www.googleapis.com/auth/admin.directory.user.readonly",
@@ -45,7 +46,8 @@ def gmail_send_message(svc_creds, message):
     """Creates and sends an email via a service account
 
     Args:
-        svc_creds (serviceaccount.Credentials): The service account retrieved from secrets.json
+        svc_creds (serviceaccount.Credentials): The service account
+            retrieved from secrets.json
         message (EmailMessage): The message to send via Gmail
 
     Returns:
@@ -57,7 +59,9 @@ def gmail_send_message(svc_creds, message):
         service = build("gmail", "v1", credentials=svc_creds)
 
         # encoded message
-        encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+        encoded_message = base64.urlsafe_b64encode(
+            message.as_bytes()
+        ).decode()
 
         create_message = {"raw": encoded_message}
         # pylint: disable=E1101
@@ -81,7 +85,8 @@ def create_sheet(folder_id, file_name, creds):
     Args:
         folder_id (str): The ID of the folder to create the sheet
         file_name (str): The name of the Sheet
-        creds (serviceaccount.Credentials): The service account retrieved from secrets.json
+        creds (serviceaccount.Credentials): The service account
+            retrieved from secrets.json
 
     Returns:
         str: The ID of the created file
@@ -99,7 +104,9 @@ def create_sheet(folder_id, file_name, creds):
         # supportsAllDrives=True to create in Google Shared Drives
         file = (
             service.files()
-            .create(body=file_metadata, supportsAllDrives=True, fields="id")
+            .create(
+                body=file_metadata, supportsAllDrives=True, fields="id"
+            )
             .execute()
         )
         return file.get("id")
@@ -116,10 +123,12 @@ def update_values(
 
     Args:
         spreadsheet_id (str): The ID of the spreadhseet
-        range_name (str): The sheet range to update, e.g. Sheet1!A:Z or Sheet1!1:1000
+        range_name (str): The sheet range to update, e.g. Sheet1!A:Z or
+            Sheet1!1:1000
         value_input_option (str): One of "USER_ENTERED" or "RAW"
         values (list): An array of values to update in the range
-        creds (serviceaccount.Credentials): The service account retrieved from secrets.json
+        creds (serviceaccount.Credentials): The service account
+            retrieved from secrets.json
 
     Returns:
         dict: Returns a dictionary of updated cell results.
@@ -155,7 +164,8 @@ def update_sheet(spreadsheet_id, creds, body):
 
     Args:
         spreadsheet_id (str): The ID of the spreadsheet
-        creds (serviceaccount.Credentials): The service account retrieved from secrets.json
+        creds (serviceaccount.Credentials): The service account
+            retrieved from secrets.json
         body (list): The array of data to update the sheet
 
     Returns:
@@ -182,7 +192,8 @@ def get_spreadsheet(spreadsheet_id, creds):
 
     Args:
         spreadsheet_id (str): The ID of the spreadsheet
-        creds (serviceaccount.Credentials): Google credentials retrieved via secrets.json
+        creds (serviceaccount.Credentials): Google credentials
+            retrieved via secrets.json
 
     Returns:
         dict: The spreadsheet metadata
@@ -190,7 +201,9 @@ def get_spreadsheet(spreadsheet_id, creds):
     try:
         service = build("sheets", "v4", credentials=creds)
         result = (
-            service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+            service.spreadsheets()
+            .get(spreadsheetId=spreadsheet_id)
+            .execute()
         )
         return result
     except HttpError as error:

@@ -1,36 +1,62 @@
 # Path to CSV file (or use local directory)
 csv_file = "users_and_rooms.csv"
 
-# Configure Base URL for all API calls. Note the URL does not include a trailing backslash
-base_url = "https://wusd-org.incidentiq.com/api/v1.0"
+######################
+# IIQ
+######################
+# Configure Base URL for all API calls. Note the URL does not include a
+# trailing backslash due to some URLs requiring variable data
+# E.g. url = f"{vars.locations_url}/{location_id}/rooms"
+iiq_base_url = "https://wusd-org.incidentiq.com/api/v1.0"
 # dev_base_url = "https://demo.iiqstaging.com/api/v1.0"
 # Location URLs
-locations_url = base_url + "/locations"
+locations_url = iiq_base_url + "/locations"
 rooms_url = locations_url + "/rooms"
 # User URLs
-users_url = base_url + "/users"
-search_url = base_url + "/search/v2"
-roles_url = base_url + "/sites/roles"
+users_url = iiq_base_url + "/users"
+search_url = iiq_base_url + "/search/v2"
+roles_url = iiq_base_url + "/sites/roles"
 # Classes URLs
-class_url = base_url + "/sis/classes"
+class_url = iiq_base_url + "/sis/classes"
 class_for_user_url = class_url + "/for/user"
 # Asset URLs
-assets_url = base_url + "/assets"
+assets_url = iiq_base_url + "/assets"
 assets_url_by_serial = assets_url + "/serial"
 assets_url_by_tag = assets_url + "/assettag"
 assets_url_status_type = assets_url + "/status/types"
 assets_url_for_user_id = assets_url + "/for"
 assets_url_by_room_id = assets_url + "/rooms"
-ms_api_search = "https://wusd-org.incidentiq.com/apps/microsoftIntune/api/microsoftIntune/data/assets/search"
+ms_api_search = (
+    "https://wusd-org.incidentiq.com/apps/microsoftIntune/api/"
+    "microsoftIntune/data/assets/search"
+)
 # Ticket URLs
-tickets_url = base_url + "/tickets"
-all_open_it_tickets = "{'ProductId':'88df910c-91aa-e711-80c2-0004ffa00010','Schema':'OpenWithModify','OnlyShowDeleted':false,'Filters':[],'FilterByProduct':true,'ShowChildTickets':true}"
+tickets_url = iiq_base_url + "/tickets"
+all_open_it_tickets = (
+    "{'ProductId':'88df910c-91aa-e711-80c2-0004ffa00010',"
+    "'Schema':'OpenWithModify','OnlyShowDeleted':false,"
+    "'Filters':[],'FilterByProduct':true,'ShowChildTickets':true}"
+)
+
+######################
+# Zoom
+######################
+# Configure Base URL for all API calls. Note the URL does not include a
+# trailing backslash
+
+zoom_oauth_url = (
+    "https://zoom.us/oauth/token?"
+    "grant_type=account_credentials&account_id="
+)
+zoom_base_url = "https://api.zoom.us/v2"
+zoom_users_url = zoom_base_url + "/users"
+zoom_phone_device_url = zoom_base_url + "/phone/devices"
 
 # Global Variables to refer to if not defined in functions
-params = {"p": 0, "$s": 20000}
+iiq_params = {"p": 0, "$s": 20000}
 timeout = 30
 max_timeout = 600
-required_keys = ["Content-Type", "Authorization"]
+iiq_required_keys = ["Content-Type", "Authorization"]
 event_days = 45  # Number of days to lookback for checking records
 event_threshold = 2  # Number of events before a user is flagged
 
