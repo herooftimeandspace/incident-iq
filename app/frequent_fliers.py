@@ -690,7 +690,7 @@ def run(env: str = "--dev"):
     file_name = date_string + " Frequent Fliers"
     sheet_range = "A:J"
 
-    # Set folder ID based on ENV flag so that we don't spam the
+    # Set folder ID and file name based on ENV flag so that we don't spam the
     # Frequent Fliers folder for end users while testing.
     if env in vars.test_env_flags:
         folder_id = "1E3YAVF55EzRDZ4GV-Pt1ke_ZZOzEVnzT"
