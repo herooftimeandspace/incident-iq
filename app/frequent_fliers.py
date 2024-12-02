@@ -586,16 +586,19 @@ def send_email(svc_creds, env: str = "--dev") -> dict:
 
     # If env is not one of the prod flags, send to a single user as a
     # test. Otherwise, send to the Device Wranglers.
-    if env not in vars.prod_env_flags:
+    if env in vars.test_env_flags:
         message["BCC"] = "lcampbell@wusd.org"
         message["Subject"] = (
             f"[INFO][{env}] {date_string} § Frequent Fliers Report"
         )
-    else:
+    elif env in vars.prod_env_flags:
         message["BCC"] = "device-wranglers@wusd.org"
         message["Subject"] = (
             f"[INFO] {date_string} Frequent Fliers Report"
         )
+    else:
+        logging.error(f"Invalid flag {env} passed. No email sent.")
+        return None
 
     logging.info(
         f"Env: {env}. Sending to {message["BCC"]} with subject "
@@ -685,8 +688,20 @@ def run(env: str = "--dev"):
     today = datetime.date.today()
     date_string = today.strftime("%Y-%m-%d")
     file_name = date_string + " Frequent Fliers"
-    folder_id = "0AMCxmb-RqkwpUk9PVA"
     sheet_range = "A:J"
+
+    # Set folder ID based on ENV flag so that we don't spam the
+    # Frequent Fliers folder for end users while testing.
+    if env in vars.test_env_flags:
+        folder_id = "1E3YAVF55EzRDZ4GV-Pt1ke_ZZOzEVnzT"
+    elif env in vars.prod_env_flags:
+        folder_id = "0AMCxmb-RqkwpUk9PVA"
+    else:
+        folder_id = "1E3YAVF55EzRDZ4GV-Pt1ke_ZZOzEVnzT"
+        logging.warning(
+            f"Env flag set to {env}. Setting folder_id"
+            f"to {folder_id}"
+        )
 
     sheet_id = elgoog.create_sheet(folder_id, file_name, svc_creds)
     values = helper.convert_to_sheets(ff_events)
