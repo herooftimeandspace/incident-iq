@@ -10,7 +10,9 @@ import datetime
 sys.path.append(str(Path(__file__).parent.parent))
 
 from api import iiq as iiq
-from api import google_api as elgoog  # importing as 'google' breaks everything
+from api import (
+    google_api as elgoog,
+)  # importing as 'google' breaks everything
 from app import helper as helper
 from app import variables as vars
 from email.message import EmailMessage
@@ -24,24 +26,26 @@ logger = logging.getLogger(__name__)
 def combine_event_data(frequent_flier_activity: list) -> list:
     """Combines check in and check out events into a single dict.
         Merge is based on asset serial number.
-        Sets 'Unassigned Asset' to None if it is still checked out to the student.
+        Sets 'Unassigned Asset' to None if it is still checked out to
+            the student.
 
     Args:
-        frequent_flier_activity (list): A list of dicts with discrete assigned
-        or unassigned asset entries
+        frequent_flier_activity (list): A list of dicts with discrete
+            assigned or unassigned asset entries
 
     Raises:
         TypeError: Parameter must be a list.
         ValueError: Parameter must not be empty.
 
     Returns:
-        list: A list of dicts. Each dict represents a combined check-in/check-out
-        activity per device serial number
+        list: A list of dicts. Each dict represents a combined
+        check-in/check-out activity per device serial number
     """
     start = time.time()
     if not isinstance(frequent_flier_activity, list):
         raise TypeError(
-            f"Required parameter '{repr(frequent_flier_activity)}' is type {type(frequent_flier_activity)}, not list."
+            f"Required parameter '{repr(frequent_flier_activity)}' is type "
+            f"{type(frequent_flier_activity)}, not list."
         )
     if not frequent_flier_activity:
         raise ValueError(
@@ -49,8 +53,9 @@ def combine_event_data(frequent_flier_activity: list) -> list:
         )
     combined_data = []
     assigned_assets = {}
-    # For events in the list, combine event to a single record based on serial number and append
-    # UserId, Name, Email, Site Location, Serial Number, Assigned Date & Unassigned Date
+    # For events in the list, combine event to a single record based on
+    # serial number and append UserId, Name, Email, Site Location,
+    # Serial Number, Assigned Date & Unassigned Date
     for event in frequent_flier_activity:
         logging.debug(f"Single event data: {event}")
         if event["Activity"] == "Assigned Asset":
@@ -95,12 +100,16 @@ def trim_events(
     threshold: int = vars.event_threshold,
     days: int = vars.event_days,
 ) -> list:
-    """Trims the device assigned or unassigned events based on the threshold and days criteria.
+    """Trims the device assigned or unassigned events based on the
+        threshold and days criteria.
 
     Args:
         combined_data (list): A list of events to parse
-        threshold (int, optional): The number of times a user must appear in the list before they are considered a frequent_flier. Defaults to 2.
-        days (int, optional): Events older than this value are discarded. Defaults to 45.
+        threshold (int, optional): The number of times a user must
+            appear in the list before they are considered a
+            frequent_flier. Defaults to 2.
+        days (int, optional): Events older than this value are
+            discarded. Defaults to 45.
 
     Raises:
         TypeError: Parameter must be a list
@@ -111,12 +120,14 @@ def trim_events(
         ValueError: Parameter must be < 0 or > 0, but != 0
 
     Returns:
-        list: A list of dicts representing users who have had multiple check-out events within the last N days
+        list: A list of dicts representing users who have had multiple
+            check-out events within the last N days
     """
     start = time.time()
     if not isinstance(combined_data, list):
         raise TypeError(
-            f"Required parameter '{repr(combined_data)}' is type {type(combined_data)}, not list."
+            f"Required parameter '{repr(combined_data)}' is type "
+            f"{type(combined_data)}, not list."
         )
     if not combined_data:
         logging.warning(
@@ -125,7 +136,8 @@ def trim_events(
         return []
     if not isinstance(threshold, int):
         raise TypeError(
-            f"Optional parameter '{repr(threshold)}' is type {type(threshold)}, not int."
+            f"Optional parameter '{repr(threshold)}' is type "
+            f"{type(threshold)}, not int."
         )
     if threshold < 2:
         raise ValueError(
@@ -137,22 +149,17 @@ def trim_events(
         )
     if days == 0:
         raise ValueError(
-            f"Optional parameter '{repr(days)}' must be a positive or negative int, not {days}"
+            f"Optional parameter '{repr(days)}' must be a positive or "
+            f"negative int, not {days}"
         )
     logging.debug(f"Trimming to events in the last {days} days")
     curated_events = []
     frequent_fliers = []
     # Check if Assigned Date was within the last N days
     for event in combined_data:
-        # if helper.is_within_last_N_days(
-        #     event["Assigned Date"], days
-        # ) or helper.is_within_last_N_days(event["Unassigned Date"], days):
-        #     curated_events.append(event)
         if helper.is_within_last_N_days(event["Assigned Date"], days):
             curated_events.append(event)
-    logging.debug(
-        f"List of events after removing events with invalid dates: {curated_events}"
-    )
+    logging.debug(f"Events with valid dates: {curated_events}")
 
     user_counts = Counter(item["Email"] for item in curated_events)
     # Discard records if they are below the event threshold.
@@ -162,7 +169,7 @@ def trim_events(
         if user_counts[item["Email"]] > threshold
     ]
     logging.debug(
-        f"List of events after removing entries below the threshold: {frequent_fliers}"
+        f"Valid events above the the threshold: {frequent_fliers}"
     )
     end = time.time()
     elapsed = end - start
@@ -174,11 +181,14 @@ def trim_events(
 def get_frequent_flier_activity(
     site_id: str = None, days: int = vars.event_days
 ) -> list:
-    """Get records of users who have had multiple device check-in and check-out events within the last N days.
+    """Get records of users who have had multiple device check-in and
+        check-out events within the last N days.
 
     Args:
-        site_id (str, optional): Site ID to limit the query. Used during debugging. Defaults to None.
-        days (int, optional): The number of days in the past to check records. Defaults to vars.event_days.
+        site_id (str, optional): Site ID to limit the query. Used
+            during debugging. Defaults to None.
+        days (int, optional): The number of days in the past to check
+            records. Defaults to vars.event_days.
 
     Raises:
         TypeError: all_users must be a list
@@ -190,30 +200,35 @@ def get_frequent_flier_activity(
     """
     start = time.time()
     all_users = iiq.get_all_users()  # Query IIQ API for all users
-    location_ids = iiq.get_all_locations_ids()  # Query IIQ API for site IDs
+    location_ids = (
+        iiq.get_all_locations_ids()
+    )  # Query IIQ API for site IDs
     student_role_id = "6d5fee76-e05e-43c0-b8e9-b8447746e501"
 
     # Type and Value checks
     if not isinstance(all_users, list):
         raise TypeError(
-            f"Required parameter {repr(all_users)} is type {type(all_users)}, not list."
+            f"Required parameter {repr(all_users)} is type {type(all_users)}, "
+            "not list."
         )
     if not all_users:
         raise ValueError("Required parameter 'all_users' is empty.")
     if not isinstance(site_id, (str, NoneType)):
         raise TypeError(
-            f"Optional parameter {repr(site_id)} is type {type(site_id)}, not str or None."
+            f"Optional parameter {repr(site_id)} is type {type(site_id)}, "
+            "not str or None."
         )
     if site_id not in location_ids and site_id is not None:
         logging.warning(
-            f"Optional parameter {repr(site_id)} is set to {site_id}. That value is not in the list of valid location IDs. Setting to None"
+            f"Optional parameter {repr(site_id)} is set to {site_id}. That "
+            "value is not in the list of valid location IDs. Setting to None"
         )
         site_id = None
     all_activity = []
 
-    # Parse through users. Discard non-students, students with no device activity,
-    # students with no updates to their account in IIQ in the last N days, or
-    # if configured, students not at site_id.
+    # Parse through users. Discard non-students, students with no
+    # device activity, students with no updates to their account in IIQ
+    # in the last N days, or if configured, students not at site_id.
     for user in all_users:
         frequent_flier_activity = []
         user_activity = None
@@ -227,11 +242,13 @@ def get_frequent_flier_activity(
             continue
         elif user["LocationId"] != site_id and site_id is None:
             logging.debug(
-                f"User {user["Email"]} is in scope because site_id == {site_id}"
+                f"User {user["Email"]} is in scope. Site_id == {site_id}"
             )
-        elif not helper.is_within_last_N_days(user["ModifiedDate"], days):
+        elif not helper.is_within_last_N_days(
+            user["ModifiedDate"], days
+        ):
             logging.debug(
-                f"User {user["Email"]} hasn't been modified in the last {days} days."
+                f"User {user["Email"]} modified date > {days} days."
             )
             continue
         else:
@@ -243,15 +260,17 @@ def get_frequent_flier_activity(
 
         if not user_activity:
             logging.debug(
-                f"User activity for {user["Email"]} is empty. Continuing to next user."
+                f"User activity for {user["Email"]} is empty. Continuing."
             )
             continue
         else:
             logging.debug(
-                f"User activity for {user["Email"]} has {len(user_activity)} records. Continuing to process."
+                f"User activity for {user["Email"]} has {len(user_activity)} "
+                "records. Continuing to process."
             )
 
-        # Parse through activity records and discard everything but asset un/assignments
+        # Parse through activity records and discard everything but asset
+        # un/assignments
         for act in user_activity:
             logging.debug(
                 f"You've reached an activity record! Here's the value: {act}"
@@ -261,12 +280,16 @@ def get_frequent_flier_activity(
             event["Name"] = user["Name"]
             event["Email"] = user["Email"]
             event["Site"] = user["LocationName"]
-            if act["UserDetails"] == "AppId: googleSso":  # Skip SSO updates
+            if (
+                act["UserDetails"] == "AppId: googleSso"
+            ):  # Skip SSO updates
                 logging.debug(
                     f"Activity value: {act["UserDetails"]}. Skipping activity."
                 )
                 continue
-            elif act["UserDetails"] == "AppId: aeriesSis":  # Skip SIS updates
+            elif (
+                act["UserDetails"] == "AppId: aeriesSis"
+            ):  # Skip SIS updates
                 logging.debug(
                     f"Activity value: {act["UserDetails"]}. Skipping activity."
                 )
@@ -277,31 +300,37 @@ def get_frequent_flier_activity(
             ):  # TypeCheck. Activity shouldn't be a str > 0
                 logging.debug(
                     f"Activity is a string, and has a length greater than 0. "
-                    f"{len(act["UserDetails"])} | type: {type(act["UserDetails"])} "
+                    f"{len(act["UserDetails"])} | type: "
+                    f"{type(act["UserDetails"])} "
                     f"| value: {act["UserDetails"]}"
                 )
                 continue  # skip
             elif (
                 len(act["UserDetails"]) == 0
             ):  # We might need a better way to check this.
-                logging.debug(f"Activty len is {len(act["UserDetails"])}.")
+                logging.debug(
+                    f"Activty len is {len(act["UserDetails"])}."
+                )
                 event["Date"] = act["ActivityDate"]
                 # Parse Activity string
                 details_list = json.loads(act["Details"])
                 logging.debug(
-                    f"Details List len {len(details_list)} | type: {type(details_list)} | value: {details_list}"
+                    f"Details List len {len(details_list)} | type: "
+                    f"{type(details_list)} | value: {details_list}"
                 )
                 if len(details_list) == 1:  # 1 item in the list
                     details_dict = details_list[0]
                     if details_dict["p"] == "Unassigned Asset":
                         event["Activity"] = details_dict["p"]
-                        event["Serial Number"] = details_dict["o"].split("#")[
-                            1
-                        ]
+                        event["Serial Number"] = details_dict[
+                            "o"
+                        ].split("#")[1]
                         frequent_flier_activity.append(event)
                 elif len(details_list) > 1:  # > 1 item in the list
                     for item in details_list:
-                        logging.debug(f"item: {item} | type: {type(item)}")
+                        logging.debug(
+                            f"item: {item} | type: {type(item)}"
+                        )
                         if isinstance(item, dict):
                             i = item
                             logging.debug(
@@ -310,31 +339,42 @@ def get_frequent_flier_activity(
                         else:
                             i = json.loads(item)
                             logging.debug(
-                                f"Item is a {type(item)}. Converted to {type(i)}"
+                                f"Item is a {type(item)}. Converted to "
+                                f"{type(i)}"
                             )
 
                         if i["p"].split(" #")[0] == "Asset":
                             event["Activity"] = "Assigned Asset"
-                            event["Serial Number"] = i["p"].split(" #")[1]
+                            event["Serial Number"] = i["p"].split(" #")[
+                                1
+                            ]
                             frequent_flier_activity.append(event)
                             logging.debug(f"Event data: {event}")
                         else:
-                            logging.debug(f"i['p'] is {i["p"]} not 'Asset'")
+                            logging.debug(
+                                f"i['p'] is {i["p"]} not 'Asset'"
+                            )
                 else:
                     logging.warning(
-                        f"Unexpected list length for UserDetails: {len(details_list)}"
+                        f"Unexpected list length for UserDetails: "
+                        f"{len(details_list)}"
                     )
             else:
                 logging.warning(
-                    f"User Details is not an expected type or value: {act["UserDetails"]}"
+                    f"User Details is not an expected type or value: "
+                    f"{act["UserDetails"]}"
                 )
 
         if frequent_flier_activity:  # Remove duplicates from the list
-            all_activity.extend(combine_event_data(frequent_flier_activity))
+            all_activity.extend(
+                combine_event_data(frequent_flier_activity)
+            )
     end = time.time()
     elapsed = end - start
     elapsed = helper.truncate(elapsed, 3)
-    logging.debug(f"get_frequent_flier_activity() took {elapsed} seconds.")
+    logging.debug(
+        f"get_frequent_flier_activity() took {elapsed} seconds."
+    )
     return all_activity
 
 
@@ -342,15 +382,19 @@ def get_frequent_flier_activity(
 # Get Tickets for students & serial number
 ################################################
 def get_related_tickets(frequent_flier_events: list) -> list:
-    """Queries the API for the user ID and asset serial number, and returns any associated tickets
+    """Queries the API for the user ID and asset serial number, and
+        returns any associated tickets
 
     Args:
-        frequent_flier_events (list): The list of events, which includes user ID and serial number
+        frequent_flier_events (list): The list of events, which
+            includes user ID and serial number
 
     Returns:
-        list: The events list with ticket detail appended to each row, if any are returned from the API
+        list: The events list with ticket detail appended to each row,
+            if any are returned from the API
     """
-    # Create an index for the list so we can reference/insert data correctly
+    # Create an index for the list so we can reference/insert data
+    # correctly
     for index, event in enumerate(frequent_flier_events):
         logging.debug(index, event)
         asset = iiq.get_asset_by_serial(event["Serial Number"])
@@ -358,39 +402,49 @@ def get_related_tickets(frequent_flier_events: list) -> list:
         # Try multiple methods to find the asset
         if asset is None:
             logging.info(
-                f"Asset {event["Serial Number"]} not found by Serial Number. Searching for asset by Asset Tag."
+                f"Asset {event["Serial Number"]} not found by Serial Number. "
+                "Searching for asset by Asset Tag."
             )
             asset = iiq.get_asset_by_tag(event["Serial Number"])
             if asset is None:
                 logging.warning(
-                    f"Asset {event["Serial Number"]} not found by Asset Tag or Serial Number. Moving to next event."
+                    f"Asset {event["Serial Number"]} not found by Asset Tag "
+                    "or Serial Number. Moving to next event."
                 )
                 continue
 
         try:
             if isinstance(asset["Status"]["Name"], str):
-                frequent_flier_events[index]["Current Asset Status"] = asset[
-                    "Status"
-                ]["Name"]
+                frequent_flier_events[index]["Current Asset Status"] = (
+                    asset["Status"]["Name"]
+                )
         except KeyError:
-            frequent_flier_events[index]["Current Asset Status"] = "Unknown"
+            frequent_flier_events[index]["Current Asset Status"] = (
+                "Unknown"
+            )
 
         try:
             if isinstance(asset["Notes"], str):
-                frequent_flier_events[index]["Asset Notes"] = asset["Notes"]
+                frequent_flier_events[index]["Asset Notes"] = asset[
+                    "Notes"
+                ]
         except KeyError:
             frequent_flier_events[index]["Asset Notes"] = None
 
         event["Serial Number"] = asset["SerialNumber"]
 
-        # Search for tickets requested by or on behalf of the user, that also match the Asset ID of the Serial Number
-        logging.debug(f"UserId {event["UserId"]} | AssetId {asset["AssetId"]}")
+        # Search for tickets requested by or on behalf of the user,
+        # that also match the Asset ID of the Serial Number
+        logging.debug(
+            f"UserId {event["UserId"]} | AssetId {asset["AssetId"]}"
+        )
         tickets = iiq.get_it_ticket_for_user_and_asset(
             event["UserId"], asset["AssetId"]
         )
         if not tickets or isinstance(tickets, NoneType):
             logging.info(
-                f"No tickets associated with both {event["Email"]} and {event["Serial Number"]}. Moving to next event."
+                f"No tickets associated with both {event["Email"]} and "
+                f"{event["Serial Number"]}. Moving to next event."
             )
             frequent_flier_events[index]["Tickets"] = None
             continue
@@ -435,13 +489,18 @@ def get_related_tickets(frequent_flier_events: list) -> list:
     return frequent_flier_events
 
 
-def create_subsheets(sheet_id: str, svc_creds, data_tab_name: str = "Data"):
-    """Creates tabs on the Google Sheet for each site and hides the data tab to prevent errors
+def create_subsheets(
+    sheet_id: str, svc_creds, data_tab_name: str = "Data"
+):
+    """Creates tabs on the Google Sheet for each site and hides the
+        data tab to prevent errors
 
     Args:
         sheet_id (str): The ID of the sheet to modify
-        svc_creds (service_account.Credentials): The service account retrieved from secrets.json
-        data_tab_name (str, optional): Name of the tab to hide. Defaults to "Data".
+        svc_creds (service_account.Credentials): The service account
+            retrieved from secrets.json
+        data_tab_name (str, optional): Name of the tab to hide.
+            Defaults to "Data".
     """
     locations = iiq.get_all_locations()
     # Filter out non-school locations
@@ -456,11 +515,13 @@ def create_subsheets(sheet_id: str, svc_creds, data_tab_name: str = "Data"):
         body = {"requests": requests}
         resp = elgoog.update_sheet(sheet_id, svc_creds, body)
         logging.info(resp)
-        # Insert a query function to the first cell of the sheet to pull and filter data from data_tab_name.
+        # Insert a query function to the first cell of the sheet to
+        # pull and filter data from data_tab_name.
         # List must be a 2D array, even when updating a single cell
         query = [
             [
-                f"=query('{data_tab_name}'!1:1000,\"select B,C,E,F,G,H,I,J where D='{loc["Name"]}' order by B,F\",1)"
+                f"=query('{data_tab_name}'!1:1000,\"select B,C,E,F,G,H,I,J "
+                f"where D='{loc["Name"]}' order by B,F\",1)"
             ]
         ]
         range = f"'{loc["Abbreviation"]}'!A1"
@@ -476,11 +537,14 @@ def create_subsheets(sheet_id: str, svc_creds, data_tab_name: str = "Data"):
 
 
 def send_email(svc_creds, env: str = "--dev") -> dict:
-    """Sends an email via BCC to end users alerting them of a new Frequent Fliers report
+    """Sends an email via BCC to end users alerting them of a new
+        Frequent Fliers report
 
     Args:
-        svc_creds (service_account.Credentials): The service account retrieved from /secrets
-        env (str, optional): Environment variable to branch code paths. Defaults to "--dev"
+        svc_creds (service_account.Credentials): The service account
+            retrieved from /secrets
+        env (str, optional): Environment variable to branch code paths.
+            Defaults to "--dev"
 
     Raises:
         TypeError: Env must be a string
@@ -493,13 +557,23 @@ def send_email(svc_creds, env: str = "--dev") -> dict:
         raise TypeError(f"Env is type: {type(env)} not str")
     if env not in list(set(vars.test_env_flags + vars.prod_env_flags)):
         raise ValueError(
-            f"Env is {env}. Should be one of {list(set(vars.test_env_flags + vars.prod_env_flags))}"
+            f"Env is {env}. Should be one of {list(set(vars.test_env_flags + 
+                                                       vars.prod_env_flags))}"
         )
     body = """
             <h1>&sect; Frequent Fliers Report</h1>
-            <p>A new Frequent Fliers report is available in the shared Google Drive. Click the link below to view the drive, and all previous reports. See the tabs at the bottom of each report for your site.</p>
-            <p><a title="&sect; Frequent Fliers Google Drive" href="https://drive.google.com/drive/folders/0AMCxmb-RqkwpUk9PVA" target="_blank">&sect; Frequent Fliers Google Drive</a></p>
-            <p>Please note, this&nbsp;report is provided for your information only. IT does not take action on this report unless requested. Please <a href="https://wusd-org.incidentiq.com/agent/dashboard" target="_blank">submit a ticket</a> with IT if you would like support in managing a student's devices or account.</p>
+            <p>A new Frequent Fliers report is available in the shared 
+            Google Drive. Click the link below to view the drive, and all 
+            previous reports. See the tabs at the bottom of each report for 
+            your site.</p>
+            <p><a title="&sect; Frequent Fliers Google Drive" 
+            href="https://drive.google.com/drive/folders/0AMCxmb-RqkwpUk9PVA" 
+            target="_blank">&sect; Frequent Fliers Google Drive</a></p>
+            <p>Please note, this&nbsp;report is provided for your information 
+            only. IT does not take action on this report unless requested. 
+            Please <a href="https://wusd-org.incidentiq.com/agent/dashboard" 
+            target="_blank">submit a ticket</a> with IT if you would like 
+            support in managing a student's devices or account.</p>
             <p>Thanks for your time,</p>
             <p>The Tech Team</p>
             """
@@ -510,8 +584,8 @@ def send_email(svc_creds, env: str = "--dev") -> dict:
     message.set_content(body, subtype="html")
     message["From"] = "svc-incidentiq@it.wusd.org"
 
-    # If env is not one of the prod flags, send to a single user as a test
-    # Otherwise, send to the Device Wranglers.
+    # If env is not one of the prod flags, send to a single user as a
+    # test. Otherwise, send to the Device Wranglers.
     if env not in vars.prod_env_flags:
         message["BCC"] = "lcampbell@wusd.org"
         message["Subject"] = (
@@ -519,8 +593,14 @@ def send_email(svc_creds, env: str = "--dev") -> dict:
         )
     else:
         message["BCC"] = "device-wranglers@wusd.org"
-        message["Subject"] = f"[INFO] {date_string} Frequent Fliers Report"
+        message["Subject"] = (
+            f"[INFO] {date_string} Frequent Fliers Report"
+        )
 
+    logging.info(
+        f"Env: {env}. Sending to {message["BCC"]} with subject "
+        f"{message["Subject"]}"
+    )
     response_msg = elgoog.gmail_send_message(svc_creds, message)
     return response_msg
 
@@ -529,7 +609,8 @@ def run(env: str = "--dev"):
     """Runs the script from the apscheduler schedule.
 
     Args:
-        env (str, optional): Environment string. Used to branch code paths. Defaults to "--dev".
+        env (str, optional): Environment string. Used to branch code
+            paths. Defaults to "--dev".
     """
     start = time.time()
     logging.info(f"Starting {__name__} with {env} flag")
@@ -539,7 +620,10 @@ def run(env: str = "--dev"):
         "requests": [
             {
                 "updateSheetProperties": {
-                    "properties": {"sheetId": 0, "title": vars.data_tab_name},
+                    "properties": {
+                        "sheetId": 0,
+                        "title": vars.data_tab_name,
+                    },
                     "fields": "title",
                 }
             },
@@ -632,4 +716,6 @@ def run(env: str = "--dev"):
     end = time.time()
     elapsed = end - start
     elapsed = helper.truncate(elapsed, 3)
-    logging.info(f"create_frequent_fliers_report took {elapsed} seconds.")
+    logging.info(
+        f"create_frequent_fliers_report took {elapsed} seconds."
+    )

@@ -8,7 +8,10 @@ from pathlib import Path
 
 import app.helper as helper
 import app.variables as app_vars
-from apscheduler.executors.pool import ProcessPoolExecutor, ThreadPoolExecutor
+from apscheduler.executors.pool import (
+    ProcessPoolExecutor,
+    ThreadPoolExecutor,
+)
 from apscheduler.schedulers.background import BlockingScheduler
 
 parent_dir = str(Path(__file__).parent.parent)
@@ -39,7 +42,8 @@ def load_secrets(file: str = "secrets.json") -> dict:
     """Loads secrets from a JSON file in the secrets subdirectory.
 
     Args:
-        file (str): The file to load secrets from. Optional. Defaults to 'secrets.json'
+        file (str): The file to load secrets from. Optional. Defaults to
+            'secrets.json'
 
     Returns:
       A dictionary containing the secrets.
@@ -55,7 +59,8 @@ def set_headers() -> dict:
     """Sets the headers for making calls to the IncidentIQ API
 
     Returns:
-        header_json (dict): The headers containing the content type and authorization bearer token
+        header_json (dict): The headers containing the content type and
+            authorization bearer token
     """
     secret = load_secrets()
     bearer_token = secret["bearer_token"]
@@ -67,17 +72,20 @@ def set_headers() -> dict:
 
 
 def set_base_url() -> str:
-    """Sets the Base URL for interacting with the IIQ API. Base URL is stored in secrets to prevent doxxing / hacking.
+    """Sets the Base URL for interacting with the IIQ API. Base URL is
+        stored in secrets to prevent doxxing / hacking.
 
     Args:
         base_url_pattern (str): The pattern to match.
 
     Raises:
         ValueError: The base_url from the secrets file must be a str
-        ValueError: The base_url from the secrets file must match the regex pattern in variables.py
+        ValueError: The base_url from the secrets file must match the
+            regex pattern in variables.py
 
     Returns:
-        base_url (str): The correctly formed URL string for use as the base of all API calls
+        base_url (str): The correctly formed URL string for use as the
+            base of all API calls
     """
     base_url_pattern = r"https://.*\.incidentiq\.com/api/v1.0"
     secret = load_secrets()
@@ -93,21 +101,24 @@ def set_base_url() -> str:
 
 
 def set_logging_config(env: str) -> dict:
-    """Sets the logging config based on the environment variable passed in
-       from the command line.
+    """Sets the logging config based on the environment variable passed
+        in from the command line.
 
     Args:
         env (str): The environment variable passed in
 
     Raises:
         TypeError: Env should be a string
-        ValueError: Env should be some iteration of prod, staging, dev or debug
+        ValueError: Env should be some iteration of prod, staging, dev
+            or debug
 
     Returns:
         dict: The logging configuration to use
     """
     if not isinstance(env, str):
-        msg = str("Environment should be type: str, not {}").format(type(env))
+        msg = str("Environment should be type: str, not {}").format(
+            type(env)
+        )
         raise TypeError(msg)
     if env not in prod_env_flags and env not in test_env_flags:
         if env is not None:
@@ -141,7 +152,9 @@ def set_logging_config(env: str) -> dict:
         logging_config = dict(
             version=1,
             formatters={
-                "f": {"format": "%(asctime)s - %(levelname)s - %(message)s"}
+                "f": {
+                    "format": "%(asctime)s - %(levelname)s - %(message)s"
+                }
             },
             handlers={
                 "file": {
@@ -168,7 +181,9 @@ def set_logging_config(env: str) -> dict:
         logging_config = dict(
             version=1,
             formatters={
-                "f": {"format": "%(asctime)s - %(levelname)s - %(message)s"}
+                "f": {
+                    "format": "%(asctime)s - %(levelname)s - %(message)s"
+                }
             },
             handlers={
                 "file": {
@@ -195,7 +210,9 @@ def set_logging_config(env: str) -> dict:
         logging_config = dict(
             version=1,
             formatters={
-                "f": {"format": "%(asctime)s - %(levelname)s - %(message)s"}
+                "f": {
+                    "format": "%(asctime)s - %(levelname)s - %(message)s"
+                }
             },
             handlers={
                 "file": {
@@ -222,7 +239,9 @@ def set_logging_config(env: str) -> dict:
         logging_config = dict(
             version=1,
             formatters={
-                "f": {"format": "%(asctime)s - %(levelname)s - %(message)s"}
+                "f": {
+                    "format": "%(asctime)s - %(levelname)s - %(message)s"
+                }
             },
             handlers={
                 "docker": {
@@ -243,8 +262,9 @@ def set_logging_config(env: str) -> dict:
 
 
 def set_env_vars(env: str) -> dict:
-    """Sets certain variables based on the flag passed in at the command line.
-    Defaults to the development / debug environment variables if not specified
+    """Sets certain variables based on the flag passed in at the
+        command line. Defaults to the development / debug environment
+        variables if not specified
 
     Args:
         env (str): The environment variable to set
@@ -269,7 +289,9 @@ def set_env_vars(env: str) -> dict:
     # Set secrets based on flag passed in from command line
     if env in test_env_flags:
         token = secrets["dev_bearer_token"]
-        env_msg = f"Environment flag set to '{env}'. Using dev_bearer_token"
+        env_msg = (
+            f"Environment flag set to '{env}'. Using dev_bearer_token"
+        )
     elif env in prod_env_flags or env is None:
         token = secrets["bearer_token"]
         env_msg = f"Environment flag set to '{env}'. Using bearer_token"
@@ -277,14 +299,17 @@ def set_env_vars(env: str) -> dict:
         # flag = env
         token = secrets["dev_bearer_token"]
         env = "--dev"
-        env_msg = f"Environment flag '{env} 'is invalid, defaulting to --dev"
+        env_msg = (
+            f"Environment flag '{env} 'is invalid, defaulting to --dev"
+        )
     env_dict = {"env": env, "env_msg": env_msg, "token": token}
     return env_dict
 
 
 def init(args: list) -> dict:
-    """Initializes the app and creates global environment variables to use
-       elsewhere in the app based on the flag passed in on the command line.
+    """Initializes the app and creates global environment variables to
+        use elsewhere in the app based on the flag passed in on the
+        command line.
 
     Args:
         args (list): List of args passed by sys.args[1:]
@@ -306,8 +331,8 @@ def init(args: list) -> dict:
         env = "--dev"
     config = set_env_vars(env)
 
-    # Get the logging config and try to create a new file for logs if the
-    # config requires it.
+    # Get the logging config and try to create a new file for logs if
+    # the config requires it.
     logging_config = set_logging_config(env)
     try:
         os.mkdir(log_location)

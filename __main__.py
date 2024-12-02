@@ -14,9 +14,13 @@ if __name__ == "__main__":
     config.logger
     # For debugging / local dev, run the commands directly rather than
     # with the scheduler
-    if env_vars["env"] in config.test_env_flags or env_vars["env"] is None:
+    if (
+        env_vars["env"] in config.test_env_flags
+        or env_vars["env"] is None
+    ):
         logging.info(
-            f"The '{config.env}' flag was passed from the command line or no flag set. Running once."
+            f"The '{config.env}' flag was passed from the command line or no "
+            "flag set. Running once."
         )
         try:
             ff.run(env_vars["env"])
@@ -39,4 +43,6 @@ if __name__ == "__main__":
             )
             config.scheduler.shutdown()
     else:
-        logging.critical(f"Invalid flag '{config.env}' passed. Shutting down.")
+        logging.critical(
+            f"Invalid flag '{config.env}' passed. Shutting down."
+        )
