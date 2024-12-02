@@ -694,10 +694,12 @@ def run(env: str = "--dev"):
     # Frequent Fliers folder for end users while testing.
     if env in vars.test_env_flags:
         folder_id = "1E3YAVF55EzRDZ4GV-Pt1ke_ZZOzEVnzT"
+        file_name = file_name + f" {env}"
     elif env in vars.prod_env_flags:
         folder_id = "0AMCxmb-RqkwpUk9PVA"
     else:
         folder_id = "1E3YAVF55EzRDZ4GV-Pt1ke_ZZOzEVnzT"
+        file_name = file_name + f" {env}"
         logging.warning(
             f"Env flag set to {env}. Setting folder_id"
             f"to {folder_id}"
