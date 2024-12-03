@@ -47,6 +47,11 @@ def set_script_config(env: str = "--dev") -> dict:
         iiq_config["Subject"] = (
             f"[INFO][{env}] {date_string} § Frequent Fliers Report"
         )
+        iiq_config["get_frequent_flier_activity"] = (
+            get_frequent_flier_activity(
+                site_id="f12ca8b4-190e-ef11-96f5-000d3a0e23bd"
+            )
+        )
     elif env in vars.dev_env_flags:
         # Dev stuff
         pass
@@ -60,6 +65,9 @@ def set_script_config(env: str = "--dev") -> dict:
             f"[INFO] {date_string} Frequent Fliers Report"
         )
         iiq_config["folder_id"] = "0AMCxmb-RqkwpUk9PVA"
+        iiq_config["get_frequent_flier_activity"] = (
+            get_frequent_flier_activity()
+        )
 
     return iiq_config
 
@@ -647,6 +655,9 @@ def run(env: str = "--dev"):
     start = time.time()
     logging.info(f"Starting {__name__} with {env} flag")
 
+    # Set config based on environment variable
+    iiq_config = set_script_config(env)
+
     # Create dicts for updating Google Sheets
     rename_first_sheet = {
         "requests": [
@@ -703,18 +714,15 @@ def run(env: str = "--dev"):
     svc_creds = elgoog.load_google_credentials()
 
     # Get Frequent Fliers, Optionally limit scope to a specific site_id
-    frequent_flier_user_activity = get_frequent_flier_activity(
-        # site_id="f12ca8b4-190e-ef11-96f5-000d3a0e23bd"
-    )
+    frequent_flier_user_activity = iiq_config[
+        "get_frequent_flier_activity"
+    ]
 
     # Trim events down to only those that meet our criteria
     frequent_flier_events = trim_events(frequent_flier_user_activity)
 
     # Get tickets related to the remaining events
     ff_events = get_related_tickets(frequent_flier_events)
-
-    # Set config based on environment variable
-    iiq_config = set_script_config(env)
 
     sheet_id = elgoog.create_sheet(
         iiq_config["folder_id"], iiq_config["file_name"], svc_creds
