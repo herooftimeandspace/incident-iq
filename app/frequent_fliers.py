@@ -23,6 +23,57 @@ start = time.time()
 logger = logging.getLogger(__name__)
 
 
+def set_script_config(env: str = "--dev") -> dict:
+    if not isinstance(env, str):
+        raise TypeError(f"Env is {type(env)} not str.")
+    if env not in list(set(vars.test_env_flags + vars.prod_env_flags)):
+        raise ValueError(
+            f"Env is {env}, should be one of"
+            f"{list(set(vars.test_env_flags + vars.prod_env_flags))}"
+        )
+    iiq_config = {}
+    today = datetime.date.today()
+    date_string = today.strftime("%Y-%m-%d")
+    iiq_config["today"] = today
+    iiq_config["date_string"] = date_string
+    iiq_config["file_name"] = date_string + " Frequent Fliers"
+    iiq_config["sheet_range"] = "A:J"
+    iiq_config["From"] = "svc-incidentiq@it.wusd.org"
+
+    if env in vars.test_env_flags:
+        iiq_config["folder_id"] = "0AF6IDj3Siv_nUk9PVA"
+        iiq_config["file_name"] = iiq_config["file_name"] + f" {env}"
+        iiq_config["BCC"] = "lcampbell@wusd.org"
+        iiq_config["Subject"] = (
+            f"[INFO][{env}] {date_string} § Frequent Fliers Report"
+        )
+        iiq_config["get_frequent_flier_activity"] = (
+            get_frequent_flier_activity(
+                site_id="f12ca8b4-190e-ef11-96f5-000d3a0e23bd"
+            )
+        )
+
+    if env in vars.dev_env_flags:
+        # Dev stuff
+        pass
+    elif env in vars.stage_env_flags:
+        iiq_config["get_frequent_flier_activity"] = (
+            get_frequent_flier_activity()
+        )
+    elif env in vars.prod_env_flags:
+        # Prod stuff
+        iiq_config["BCC"] = "device-wranglers@wusd.org"
+        iiq_config["Subject"] = (
+            f"[INFO] {date_string} Frequent Fliers Report"
+        )
+        iiq_config["folder_id"] = "0AMCxmb-RqkwpUk9PVA"
+        iiq_config["get_frequent_flier_activity"] = (
+            get_frequent_flier_activity()
+        )
+
+    return iiq_config
+
+
 def combine_event_data(frequent_flier_activity: list) -> list:
     """Combines check in and check out events into a single dict.
         Merge is based on asset serial number.
@@ -536,29 +587,33 @@ def create_subsheets(
         logging.info(update_resp)
 
 
-def send_email(svc_creds, env: str = "--dev") -> dict:
+def send_email(svc_creds, iiq_config: dict) -> dict:
     """Sends an email via BCC to end users alerting them of a new
         Frequent Fliers report
 
     Args:
         svc_creds (service_account.Credentials): The service account
             retrieved from /secrets
-        env (str, optional): Environment variable to branch code paths.
-            Defaults to "--dev"
+        iiq_config (dict): Config for routing email based on previously defined
+            env variable.
 
     Raises:
-        TypeError: Env must be a string
-        ValueError: Env must be a valid environment flag
+        TypeError: iiq_config must be a dict
 
     Returns:
         response_msg (dict): The response JSON from the Google API
     """
-    if not isinstance(env, str):
-        raise TypeError(f"Env is type: {type(env)} not str")
-    if env not in list(set(vars.test_env_flags + vars.prod_env_flags)):
-        raise ValueError(
-            f"Env is {env}. Should be one of {list(set(vars.test_env_flags + 
-                                                       vars.prod_env_flags))}"
+    if not isinstance(iiq_config, dict):
+        raise TypeError(
+            f"IIQ_Config is type: {type(iiq_config)} not dict"
+        )
+    if "BCC" not in iiq_config:
+        raise KeyError("'BCC' not in the list of keys for iiq_config.")
+    if "From" not in iiq_config:
+        raise KeyError("'From' not in the list of keys for iiq_config.")
+    if "Subject" not in iiq_config:
+        raise KeyError(
+            "'Subject' not in the list of keys for iiq_config."
         )
     body = """
             <h1>&sect; Frequent Fliers Report</h1>
@@ -577,29 +632,16 @@ def send_email(svc_creds, env: str = "--dev") -> dict:
             <p>Thanks for your time,</p>
             <p>The Tech Team</p>
             """
-    today = datetime.date.today()
-    date_string = today.strftime("%Y-%m-%d")
     message = EmailMessage()
 
     message.set_content(body, subtype="html")
-    message["From"] = "svc-incidentiq@it.wusd.org"
-
-    # If env is not one of the prod flags, send to a single user as a
-    # test. Otherwise, send to the Device Wranglers.
-    if env not in vars.prod_env_flags:
-        message["BCC"] = "lcampbell@wusd.org"
-        message["Subject"] = (
-            f"[INFO][{env}] {date_string} § Frequent Fliers Report"
-        )
-    else:
-        message["BCC"] = "device-wranglers@wusd.org"
-        message["Subject"] = (
-            f"[INFO] {date_string} Frequent Fliers Report"
-        )
+    message["From"] = iiq_config["From"]
+    message["BCC"] = iiq_config["BCC"]
+    message["Subject"] = iiq_config["Subject"]
 
     logging.info(
-        f"Env: {env}. Sending to {message["BCC"]} with subject "
-        f"{message["Subject"]}"
+        f"Sending email from {message["From"]} to {message["BCC"]} with "
+        f"subject {message["Subject"]}"
     )
     response_msg = elgoog.gmail_send_message(svc_creds, message)
     return response_msg
@@ -614,6 +656,9 @@ def run(env: str = "--dev"):
     """
     start = time.time()
     logging.info(f"Starting {__name__} with {env} flag")
+
+    # Set config based on environment variable
+    iiq_config = set_script_config(env)
 
     # Create dicts for updating Google Sheets
     rename_first_sheet = {
@@ -671,9 +716,9 @@ def run(env: str = "--dev"):
     svc_creds = elgoog.load_google_credentials()
 
     # Get Frequent Fliers, Optionally limit scope to a specific site_id
-    frequent_flier_user_activity = get_frequent_flier_activity(
-        # site_id="f12ca8b4-190e-ef11-96f5-000d3a0e23bd"
-    )
+    frequent_flier_user_activity = iiq_config[
+        "get_frequent_flier_activity"
+    ]
 
     # Trim events down to only those that meet our criteria
     frequent_flier_events = trim_events(frequent_flier_user_activity)
@@ -681,17 +726,16 @@ def run(env: str = "--dev"):
     # Get tickets related to the remaining events
     ff_events = get_related_tickets(frequent_flier_events)
 
-    # Create Google Sheet in Shared Drive
-    today = datetime.date.today()
-    date_string = today.strftime("%Y-%m-%d")
-    file_name = date_string + " Frequent Fliers"
-    folder_id = "0AMCxmb-RqkwpUk9PVA"
-    sheet_range = "A:J"
-
-    sheet_id = elgoog.create_sheet(folder_id, file_name, svc_creds)
+    sheet_id = elgoog.create_sheet(
+        iiq_config["folder_id"], iiq_config["file_name"], svc_creds
+    )
     values = helper.convert_to_sheets(ff_events)
     result = elgoog.update_values(
-        sheet_id, sheet_range, "USER_ENTERED", values, svc_creds
+        sheet_id,
+        iiq_config["sheet_range"],
+        "USER_ENTERED",
+        values,
+        svc_creds,
     )
     logging.info(result)
 
@@ -710,7 +754,7 @@ def run(env: str = "--dev"):
     elgoog.update_sheet(sheet_id, svc_creds, body=hide_first_sheet)
 
     # Send email notification. Use env to route the email for testing.
-    email_response = send_email(svc_creds, env)
+    email_response = send_email(svc_creds, iiq_config)
     logging.debug(email_response)
 
     end = time.time()
