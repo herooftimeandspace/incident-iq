@@ -31,8 +31,8 @@ if __name__ == "__main__":
             )
     elif env_vars["env"] in config.stage_env_flags:
         logging.info(
-            f"The '{config.env}' flag was passed from the command line"
-            "Starting scheduler."
+            f"The '{config.env}' flag was passed from the command line."
+            " Starting scheduler."
         )
         app.main(env_vars["env"])
         try:
@@ -44,8 +44,8 @@ if __name__ == "__main__":
             config.scheduler.shutdown()
     elif env_vars["env"] in config.prod_env_flags:
         logging.info(
-            f"The '{config.env}' flag was passed from the command line"
-            "Starting scheduler."
+            f"The '{config.env}' flag was passed from the command line."
+            " Starting scheduler."
         )
         app.main(env_vars["env"])
         try:
