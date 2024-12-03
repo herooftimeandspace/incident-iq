@@ -52,12 +52,14 @@ def set_script_config(env: str = "--dev") -> dict:
                 site_id="f12ca8b4-190e-ef11-96f5-000d3a0e23bd"
             )
         )
-    elif env in vars.dev_env_flags:
+
+    if env in vars.dev_env_flags:
         # Dev stuff
         pass
     elif env in vars.stage_env_flags:
-        # Stage stuff
-        pass
+        iiq_config["get_frequent_flier_activity"] = (
+            get_frequent_flier_activity()
+        )
     elif env in vars.prod_env_flags:
         # Prod stuff
         iiq_config["BCC"] = "device-wranglers@wusd.org"
