@@ -1,6 +1,5 @@
 import json
 import logging
-from multiprocessing import Value
 import sys
 from collections import Counter
 from pathlib import Path
