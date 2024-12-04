@@ -31,6 +31,9 @@ jobs:
       run: echo "copilot_env=prod" >> $GITHUB_ENV
     - name: Stop Container
       run: |
+        echo "Attempting to stop containers with label: $copilot_env"
+        echo "Here's the list of matching containers:"
+        docker ps --filter "label=env=$copilot_env" -aq
         docker ps --filter "label=env=$copilot_env" -aq | xargs docker stop || true
         docker ps --filter "label=env=$copilot_env" -aq | xargs docker rm || true
     - name: Build the Docker image
