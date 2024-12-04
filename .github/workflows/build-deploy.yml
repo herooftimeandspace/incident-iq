@@ -50,8 +50,8 @@ jobs:
       if: contains( github.ref, 'dev')
       run: |
         echo "Cleaning Docker Dev"
-        docker rm -v $(docker ps -a -q --filter status=exited) || true
-        docker rmi $(docker images --filter "dangling=true" -q) || true
+        docker ps --filter "status=exited" -aq | xargs docker rm -v || true
+        docker images --filter "dangling=true" -q | xargs docker rmi || true 
         docker system prune -a --force --filter "label!=prod" || true
     - name: staging_cleanup
       if: contains( github.ref, 'staging')
