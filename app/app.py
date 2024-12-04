@@ -29,8 +29,8 @@ def main(env) -> bool:
                 "cron",
                 args=[env],
                 month="*",  # Any month
-                day="*",  # Any day
-                hour="*",  # Any hour
+                day="*/14",  # Every two weeks
+                hour="12",  # 12PM
                 minute="13",  # at the 13th minute
                 id="create_ff_report_cron_stage",
             )
