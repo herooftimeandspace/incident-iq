@@ -47,19 +47,19 @@ def set_script_config(env: str = "--dev") -> dict:
         iiq_config["Subject"] = (
             f"[INFO][{env}] {date_string} § Frequent Fliers Report"
         )
+
+    if env in vars.dev_env_flags:
+        # Do a short run
         iiq_config["get_frequent_flier_activity"] = (
             get_frequent_flier_activity(
                 site_id="f12ca8b4-190e-ef11-96f5-000d3a0e23bd"
             )
         )
-
-    if env in vars.dev_env_flags:
-        # Dev stuff
-        pass
     elif env in vars.stage_env_flags:
         iiq_config["get_frequent_flier_activity"] = (
             get_frequent_flier_activity()
         )
+        iiq_config["BCC"] = "sysreports@it.wusd.org"
     elif env in vars.prod_env_flags:
         # Prod stuff
         iiq_config["BCC"] = "device-wranglers@wusd.org"
