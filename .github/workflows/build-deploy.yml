@@ -29,8 +29,15 @@ jobs:
     - name: if_prod
       if: contains( github.ref, 'main')
       run: echo "copilot_env=prod" >> $GITHUB_ENV
+    - name: Stop Container
+      run: |
+        echo "Attempting to stop containers with label: $copilot_env"
+        echo "Here's the list of matching containers:"
+        docker ps --filter "label=env=$copilot_env" -aq
+        docker ps --filter "label=env=$copilot_env" -aq | xargs docker stop || true
+        docker ps --filter "label=env=$copilot_env" -aq | xargs docker rm || true
     - name: Build the Docker image
-      run: docker build . --build-arg COPILOT_ENV=$copilot_env --file Dockerfile --label $copilot_env --tag iiq-$copilot_env
+      run: docker build . --build-arg COPILOT_ENV=$copilot_env --file Dockerfile --label "env=$copilot_env" --tag iiq-$copilot_env
     - name: Run Docker
       run:  |
         echo "Env set to $copilot_env"
@@ -43,20 +50,20 @@ jobs:
       if: contains( github.ref, 'dev')
       run: |
         echo "Cleaning Docker Dev"
-        docker rm -v $(docker ps -a -q -f status=exited) || true
-        docker rmi $(docker images -f "dangling=true" -q) || true
-        docker system prune -a --force --filter "label!=prod" || true
+        docker ps --filter "status=exited" --filter "label=env=$copilot_env" -aq | xargs docker rm -v || true
+        docker images --filter "dangling=true" -q | xargs docker rmi || true 
+        docker system prune -a --force --filter "label=env=$copilot_env" || true
     - name: staging_cleanup
       if: contains( github.ref, 'staging')
       run: |
         echo "Cleaning Docker Staging"
-        docker rm -v $(docker ps -a -q -f status=exited) || true
-        docker rmi $(docker images -f "dangling=true" -q) || true
-        docker system prune -a --force --filter "until=168h" --filter "label!=prod" || true
+        docker ps --filter "status=exited" --filter "label=env=$copilot_env" -aq | xargs docker rm -v || true
+        docker images --filter "dangling=true" -q | xargs docker rmi || true 
+        docker system prune -a --force --filter "until=168h" --filter "label=env=$copilot_env" || true
     - name: prod_cleanup
       if: contains( github.ref, 'main')
       run: |
         echo "Cleaning Docker Prod. Deleting Prod files > 30d old"
-        docker rm -v $(docker ps -a -q -f status=exited) || true
-        docker rmi $(docker images -f "dangling=true" -q) || true
-        docker system prune -a --force --filter "until=730h" --filter "label=prod" || true
+        docker ps --filter "status=exited"  --filter "label=env=$copilot_env" -aq | xargs docker rm -v || true
+        docker images --filter "dangling=true" -q | xargs docker rmi || true 
+        docker system prune -a --force --filter "until=730h" --filter "label=env=$copilot_env" || true

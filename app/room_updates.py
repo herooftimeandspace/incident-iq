@@ -19,7 +19,8 @@ def run(env: str = "--dev"):
     """Runs the script from the apscheduler schedule.
 
     Args:
-        env (str, optional): Environment string. Used to branch code paths. Defaults to "--dev".
+        env (str, optional): Environment string. Used to branch code
+            paths. Defaults to "--dev".
     """
     start = time.time()
     logging.info(f"Starting {__name__} with {env} flag")
@@ -48,7 +49,7 @@ def run(env: str = "--dev"):
     iiq_rooms_to_assign_staff = []
     for staff in staff_and_faculty:
         # TODO: Update this when new room numbers go up on the walls
-        # Summery 2025
+        # Summer 2025
         try:
             if staff["Location"]["Name"] not in [
                 "Windsor High School",
@@ -56,13 +57,13 @@ def run(env: str = "--dev"):
                 "Big Picture Learning",
             ]:
                 logging.debug(
-                    f"{staff["Name"]} is not at the high school. Continuing to next staff member."
+                    f"{staff["Name"]} is not at the high school."
                 )
-                continue  # Skip staff who aren't on the correct room number scheme
+                continue  # Skip staff who aren't on the correct room scheme
         except KeyError:
             logging.warning(
-                f"{staff["Name"]} {staff["UserId"]} doesn't have a location set. "
-                "Continuing to next staff member."
+                f"{staff["Name"]} {staff["UserId"]} doesn't have a location "
+                "set."
             )
             continue
         url = vars.class_for_user_url + "/" + staff["UserId"]
@@ -71,19 +72,24 @@ def run(env: str = "--dev"):
         staff_course_rooms = []
         if not sis_courses:
             logging.debug(
-                f"{staff["Name"]} {staff["UserId"]} does not have courses assigned to them in the SIS."
+                f"{staff["Name"]} {staff["UserId"]} does not have courses "
+                "assigned to them in the SIS."
             )
             continue
         for assigned_course in sis_courses:
             course_classroom_numbers.append(
                 {
                     "LocationId": assigned_course["LocationId"],
-                    "CourseRoomNumber": assigned_course["LocationDetails"],
+                    "CourseRoomNumber": assigned_course[
+                        "LocationDetails"
+                    ],
                 }
             )
 
         try:
-            assigned_rooms = staff["Options"]["Locations"]["FavoriteLocations"]
+            assigned_rooms = staff["Options"]["Locations"][
+                "FavoriteLocations"
+            ]
         except KeyError:
             assigned_rooms = []
 
@@ -97,8 +103,11 @@ def run(env: str = "--dev"):
                     and cn["LocationId"] == room["LocationId"]
                 ):
                     logging.debug(
-                        f"Course Room Number: {cn["CourseRoomNumber"]} | Course Site Id: {cn["LocationId"]} | "
-                        f"Site Room Number: {room["Name"]} | RoomId: {room["LocationRoomId"]} | SiteId: {room["LocationId"]}"
+                        f"Course Room Number: {cn["CourseRoomNumber"]} | "
+                        f"Course Site Id: {cn["LocationId"]} | "
+                        f"Site Room Number: {room["Name"]} | "
+                        f"RoomId: {room["LocationRoomId"]} | "
+                        f"SiteId: {room["LocationId"]}"
                     )
                     staff_course_rooms.append(room["LocationRoomId"])
 
@@ -107,21 +116,25 @@ def run(env: str = "--dev"):
                 set(sorted(staff_course_rooms))
             ):
                 logging.info(
-                    "User's assigned rooms and course rooms are identical. No updates needed"
+                    "Assigned and course rooms are equal. No updates needed."
                 )
                 continue  # Skip if we don't need to update the assigned rooms
             common_elements = [
-                item for item in assigned_rooms if item in staff_course_rooms
+                item
+                for item in assigned_rooms
+                if item in staff_course_rooms
             ]
         elif assigned_rooms and not staff_course_rooms:
             common_elements = assigned_rooms
         elif not assigned_rooms and staff_course_rooms:
             common_elements = staff_course_rooms
         else:
-            common_elements = []  # TODO: Collect all SIS room numbers that don't match IIQ and generate a report
+            # TODO: Collect all SIS room numbers that don't match IIQ
+            # and generate a report
+            common_elements = []
             logging.info(
-                f"Staff ({staff["Name"]}, {staff["UserId"]}) has no assigned rooms and no courses "
-                "with valid IIQ room numbers. Continuting to next staff member"
+                f"Staff ({staff["Name"]}, {staff["UserId"]}) has no assigned "
+                f"rooms and no courses with valid IIQ room numbers."
             )
             continue
         common_elements = list(set(common_elements))
@@ -138,7 +151,8 @@ def run(env: str = "--dev"):
         logging.info(users_to_modify)
         # TODO: Actually update the users.
         # DO NOT RUN THIS BECAUSE ROOM NUMBERS ARE NOT CONSISTENT AT WMS
-        # iiq.modify_assigned_rooms(users_to_modify["UserId"], users_to_modify["AssignedRooms"])
+        # iiq.modify_assigned_rooms(users_to_modify["UserId"],
+        #                           users_to_modify["AssignedRooms"])
 
     end = time.time()
     elapsed = end - start

@@ -23,17 +23,32 @@ def main(env) -> bool:
               False if not.
     """
     try:
-        config.scheduler.add_job(
-            ff.run,
-            "cron",
-            args=[env],
-            month="*",  # Any month
-            day="1",  # First day
-            hour="4",  # 4AM
-            id="create_ff_report_cron",
-        )
+        if env in config.stage_env_flags:
+            config.scheduler.add_job(
+                ff.run,
+                "cron",
+                args=[env],
+                month="*",  # Any month
+                day="*/14",  # Every two weeks
+                hour="12",  # 12PM
+                minute="13",  # at the 13th minute
+                id="create_ff_report_cron_stage",
+            )
+            return True
+        elif env in config.prod_env_flags:
+            config.scheduler.add_job(
+                ff.run,
+                "cron",
+                args=[env],
+                month="*",  # Any month
+                day="1",  # First day
+                hour="4",  # 4AM
+                id="create_ff_report_cron_prod",
+            )
+            return True
+        else:
+            return False
 
-        return True
     except Exception as e:
         logging.ERROR(e)
         return False

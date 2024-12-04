@@ -16,23 +16,36 @@ def call_api(
     method: str = "GET",
     iiq_payload: str | dict | None = "",
     iiq_headers: dict = config.set_headers(),
-    params: dict = vars.params,
+    params: dict = vars.iiq_params,
     timeout: int = vars.timeout,
     max_timeout: int = vars.max_timeout,
 ) -> list:
-    """Sends HTTP Requests to the IncidentIQ API. Requires a URL to send. Defaults to the "Get" method if none is specified.
+    """Sends HTTP Requests to the IncidentIQ API. Requires a URL to
+        send. Defaults to the "Get" method if none is specified.
 
     Args:
         url (str): The URL to send the HTTP request to
-        method (str, optional): The method of the HTTP request to use. Case sensitive. Can be any of GET, POST, QUERY, PUT, DELETE. Defaults to "get".
-        iiq_payload (dict,str,None, optional): The payload used when sending a POST command. Defaults to None, which will remove data from IIQ.
-        iiq_headers (dict, optional): Headers for the HTTP request. If none are supplied, will pull default credentials from /secrets/secrets.json. Defaults to config.set_headers().
-        params (dict, optional): Starting page and number of results to return. Used to loop through pages if needed. Defaults to {"p": 0,"": 20000}.
-        timeout (int, optional): Amount of time in seconds to wait for a timeout during the request. Defaults to 30.
-        max_timeout (int, optional): The maximum amount of time to wait before raising an error and breaking the request. Defaults to 600.
+        method (str, optional): The method of the HTTP request to use.
+            Case sensitive. Can be any of GET, POST, QUERY, PUT,
+            DELETE. Defaults to "get".
+        iiq_payload (dict,str,None, optional): The payload used when
+            sending a POST command. Defaults to None, which will remove
+            data from IIQ.
+        iiq_headers (dict, optional): Headers for the HTTP request. If
+            none are supplied, will pull default credentials from
+                /secrets/secrets.json. Defaults to config.set_headers().
+        params (dict, optional): Starting page and number of results to
+            return. Used to loop through pages if needed. Defaults to
+            {"p": 0,"": 20000}.
+        timeout (int, optional): Amount of time in seconds to wait for
+            a timeout during the request. Defaults to 30.
+        max_timeout (int, optional): The maximum amount of time to wait
+            before raising an error and breaking the request. Defaults
+            to max_timeout set in variables.py.
 
     Returns:
-        list: A list of items from the HTTP response JSON. Returns None if empty.
+        list: A list of items from the HTTP response JSON. Returns None
+            if empty.
     """
     if not isinstance(url, str):
         raise TypeError(f"URL must be type: str, not {type(url)}")
@@ -43,34 +56,50 @@ def call_api(
     if not method:
         raise ValueError("Method must not be empty")
     if method.upper() not in ["GET", "POST", "DELETE", "QUERY"]:
-        raise ValueError("Method must be one of GET, POST, DELETE, QUERY")
+        raise ValueError(
+            "Method must be one of GET, POST, DELETE, QUERY"
+        )
     if not isinstance(iiq_payload, (dict, str, NoneType)):
         raise TypeError(
             f"JSON must be type: dict, str or None, not {type(iiq_payload)}"
         )
     if not isinstance(iiq_headers, dict):
-        raise TypeError(f"Headers must be type: dict, not {type(iiq_headers)}")
+        raise TypeError(
+            f"Headers must be type: dict, not {type(iiq_headers)}"
+        )
     if not iiq_headers:
         raise ValueError("Headers must not be empty")
-    if not all(key in iiq_headers for key in vars.required_keys):
+    if not all(key in iiq_headers for key in vars.iiq_required_keys):
         missing_keys = [
-            key for key in vars.required_keys if key not in iiq_headers
+            key
+            for key in vars.iiq_required_keys
+            if key not in iiq_headers
         ]
         raise KeyError(f"Missing required keys: {missing_keys}")
     if not isinstance(params, (dict, NoneType)):
-        raise TypeError(f"Params must be type: dict, not {type(params)}")
+        raise TypeError(
+            f"Params must be type: dict, not {type(params)}"
+        )
     if isinstance(params, dict):
-        if not all(key in params for key in vars.params):
-            missing_keys = [key for key in vars.params if key not in params]
+        if not all(key in params for key in vars.iiq_params):
+            missing_keys = [
+                key for key in vars.iiq_params if key not in params
+            ]
             raise KeyError(f"Missing required keys: {missing_keys}")
     if not isinstance(timeout, int):
-        raise TypeError(f"Method must be type: int, not {type(timeout)}")
+        raise TypeError(
+            f"Method must be type: int, not {type(timeout)}"
+        )
     if not timeout:
         raise ValueError("Timeout must not be empty")
     if timeout < 0:
-        raise ValueError(f"Timeout must be a positive int, not {timeout}")
+        raise ValueError(
+            f"Timeout must be a positive int, not {timeout}"
+        )
     if not isinstance(max_timeout, int):
-        raise TypeError(f"Method must be type: json, not {type(max_timeout)}")
+        raise TypeError(
+            f"Method must be type: json, not {type(max_timeout)}"
+        )
     if not max_timeout:
         raise ValueError("Max Timeout must not be empty")
     if max_timeout < 0:
@@ -79,7 +108,8 @@ def call_api(
         )
     if max_timeout < timeout:
         raise ValueError(
-            f"Max Timeout ({max_timeout}) must be greater than the timeout ({timeout})"
+            f"Max Timeout ({max_timeout}) must be greater than the "
+            f"timeout ({timeout})"
         )
 
     iiq_data = []
@@ -88,29 +118,34 @@ def call_api(
         try:
             if method.upper() == "GET":
                 response = requests.get(
-                    url, headers=iiq_headers, params=params, timeout=timeout
+                    url,
+                    headers=iiq_headers,
+                    params=params,
+                    timeout=timeout,
                 )
-                response.raise_for_status()  # Raise an exception for error responses
+                # Raise an exception for error responses
+                response.raise_for_status()
                 response_json = (
                     response.json()
                 )  # Create a dict from the JSON data
                 status_code = response_json["StatusCode"]
-                # logging.debug(f"Status Code: {status_code} | URL: {url} | Page: {page} | Amount: {params['$s']} | Timeout: {timeout} | Response: {response_json}")
-                logging.debug(f"Status Code: {status_code} | URL: {url}")
+                logging.debug(
+                    f"Status Code: {status_code} | URL: {url}"
+                )
             elif method.upper() == "POST":
-                # logging.info(f"Attempting to {method} {iiq_payload} as data")
                 response = requests.post(
                     url,
                     data=iiq_payload,
                     headers=iiq_headers,
                     timeout=timeout,
                 )
-                response.raise_for_status()  # Raise an exception for error responses
+                # Raise an exception for error responses
+                response.raise_for_status()
                 response_json = (
                     response.json()
                 )  # Create a dict from the JSON data
                 logging.debug(
-                    f"Status Code: {response_json["StatusCode"]} | Message {response_json["Message"]} | URL: {url}"
+                    f"Status Code: {response_json["StatusCode"]} | URL: {url}"
                 )
                 # break
             elif method.upper() == "QUERY":
@@ -121,11 +156,11 @@ def call_api(
                     params=params,
                     timeout=timeout,
                 )
-                response.raise_for_status()  # Raise an exception for error responses
+                # Raise an exception for error responses
+                response.raise_for_status()
                 response_json = (
                     response.json()
                 )  # Create a dict from the JSON data
-                # logging.debug(f"Status Code: {status_code} | URL: {url} | Page: {page} | Amount: {params['$s']} | Timeout: {timeout} | Response: {response_json}")
                 logging.debug(
                     f"Status Code: {response_json["StatusCode"]} | URL: {url}"
                 )
@@ -159,19 +194,19 @@ def call_api(
         except requests.exceptions.Timeout:
             if timeout >= 600:  # Error and Break the loop.
                 logging.error(
-                    f"Request timeout={timeout} | Retrieving data exceeded {max_timeout} seconds."
+                    f"Request timeout={timeout} | Retrieving data "
+                    f"exceeded {max_timeout} seconds."
                 )
                 break
             else:
                 timeout = timeout * 2
                 logging.warning(
-                    "API timeout occurred. Backing off for {} seconds.".format(
-                        timeout
-                    )
+                    f"API timeout occurred. Backing off for {timeout} "
+                    "seconds."
                 )
                 sleep(timeout)
-                # Retry with larger timeout. Call the API separately for each method so
-                # we don't overload the parameters
+                # Retry with larger timeout. Call the API separately
+                # for each method so we don't overload the parameters
                 if method.upper() == "GET":
                     call_api(
                         url=url,
@@ -219,7 +254,8 @@ def call_api(
                 break
         except requests.exceptions.HTTPError as e:
             logging.warning(
-                f"HTTPError exception for API {method} call to {url} with payload {iiq_payload} | Message: {e} | Response: {response}"
+                f"HTTPError exception for API {method} call to {url} with "
+                f"payload {iiq_payload} | Message: {e}"  # | Response: {response}
             )
             if e.response.status_code == 502 and timeout < max_timeout:
                 sleep(timeout)
@@ -232,7 +268,10 @@ def call_api(
                     timeout=timeout,
                     max_timeout=max_timeout,
                 )
-            elif e.response.status_code == 500 and method.upper() == "POST":
+            elif (
+                e.response.status_code == 500
+                and method.upper() == "POST"
+            ):
                 # Try to fix payload by converting it to str
                 iiq_payload = json.dumps(iiq_payload)
                 call_api(
@@ -246,9 +285,15 @@ def call_api(
                 )
             else:
                 raise
-        except Exception as e:
+        except requests.exceptions.ConnectionError as e:
             logging.warning(
-                f"An exception occurred for API {method} call to {url} | Message: {e} | Response: {response}"
+                f"HTTPError exception for API {method} call to {url} with "
+                f"payload {iiq_payload} | Message: {e}"
+            )
+        except Exception as e:
+            logging.exception(
+                f"An exception occurred for API {method} call to {url} | "
+                f"Message: {type(e).__name__}"  # | Response: {response}
             )
         if not response:
             logging.warning(
@@ -258,7 +303,8 @@ def call_api(
         response_data = response.json()
         if response_data["ItemCount"] <= 0:
             logging.info(
-                f"API {method} call to {url} returned {response_data["ItemCount"]} results."
+                f"API {method} call to {url} returned "
+                f"{response_data["ItemCount"]} results."
             )
             return None
 
@@ -269,17 +315,21 @@ def call_api(
         except KeyError:
             page_count = current_page
 
-        # Check if the current page is less than or equal to the page count
+        # Check if the current page is less than or equal to the page
+        # count
         if page < page_count:
             page += 1  # Increment page by 1
             logging.debug(
-                f"Current Page: {current_page} | Next Page: {page}| Total Page Count: {page_count}"
+                f"Current Page: {current_page} | Next Page: {page}| Total "
+                f"Page Count: {page_count}"
             )
-            # Iterate through the list of dicts. Append the results to the list.
+            # Iterate through the list of dicts.
+            # Append the results to the list.
             for i in response_data["Items"]:
                 iiq_data.append(i)
         elif page == page_count:
-            # If there was only 1 page, return that page, otherwise return the full list so that the next page can be added.
+            # If there was only 1 page, return that page, otherwise
+            # return the full list so that the next page can be added.
             # logging.debug("All pages have been fetched.")
             if current_page == 1:
                 try:
@@ -293,28 +343,39 @@ def call_api(
                         raise e
                 except Exception as e:
                     logging.error(
-                        f"An error occurred while parsing the response data 'Items'. {e}"
+                        "An error occurred while parsing the response data "
+                        f"'Items'. {e}"
                     )
                 logging.info(
-                    f"API {method} call to {url} returned page {current_page} of {page_count} with {len(iiq_data)} items in the result."
+                    f"API {method} call to {url} returned page {current_page} "
+                    f"of {page_count} with {len(iiq_data)} items in the "
+                    "result."
                 )
                 logging.debug(
-                    f"Type: {type(iiq_data)} | Len {len(iiq_data)} | iiq_data: {iiq_data}"
+                    f"Type: {type(iiq_data)} | Len {len(iiq_data)} | "
+                    f"iiq_data: {iiq_data}"
                 )
                 if not iiq_data:
-                    logging.warning("The HTTP request returned an empty list.")
+                    logging.warning(
+                        "The HTTP request returned an empty list."
+                    )
                     return None
                 else:
                     return iiq_data
             else:
                 logging.info(
-                    f"API {method} call to {url} returned page {current_page} of {page_count} with {len(iiq_data)} items in the result."
+                    f"API {method} call to {url} returned page {current_page} "
+                    f"of {page_count} with {len(iiq_data)} items in the "
+                    "result."
                 )
                 logging.debug(
-                    f"Type: {type(iiq_data)} | Len {len(iiq_data)} | iiq_data: {iiq_data}"
+                    f"Type: {type(iiq_data)} | Len {len(iiq_data)} | "
+                    f"iiq_data: {iiq_data}"
                 )
                 if not iiq_data:
-                    logging.warning("The HTTP request returned an empty list.")
+                    logging.warning(
+                        "The HTTP request returned an empty list."
+                    )
                     return None
                 else:
                     return iiq_data
@@ -328,23 +389,36 @@ def call_intune_api(
     method: str = "POST",
     iiq_payload: str | dict | None = "",
     iiq_headers: dict = config.set_headers(),
-    params: dict = vars.params,
+    params: dict = vars.iiq_params,
     timeout: int = vars.timeout,
     max_timeout: int = vars.max_timeout,
 ) -> list:
-    """Sends HTTP Requests to the IncidentIQ API. Requires a URL to send. Defaults to the "Get" method if none is specified.
+    """Sends HTTP Requests to the IncidentIQ API. Requires a URL to
+        send. Defaults to the "Get" method if none is specified.
 
     Args:
         url (str): The URL to send the HTTP request to
-        method (str, optional): The method of the HTTP request to use. Case sensitive. Can be any of GET, POST, DELETE. Defaults to "get".
-        iiq_payload (dict,str,None, optional): The payload used when sending a POST command. Defaults to None, which will remove data from IIQ.
-        iiq_headers (dict, optional): Headers for the HTTP request. If none are supplied, will pull default credentials from /secrets/secrets.json. Defaults to config.set_headers().
-        params (dict, optional): Starting page and number of results to return. Used to loop through pages if needed. Defaults to {"p": 0,"": 20000}.
-        timeout (int, optional): Amount of time in seconds to wait for a timeout during the request. Defaults to 30.
-        max_timeout (int, optional): The maximum amount of time to wait before raising an error and breaking the request. Defaults to 600.
+        method (str, optional): The method of the HTTP request to use.
+            Case sensitive. Can be any of GET, POST, DELETE. Defaults
+            to "get".
+        iiq_payload (dict,str,None, optional): The payload used when
+            sending a POST command. Defaults to None, which will remove
+            data from IIQ.
+        iiq_headers (dict, optional): Headers for the HTTP request. If
+            none are supplied, will pull default credentials from
+            /secrets/secrets.json. Defaults to config.set_headers().
+        params (dict, optional): Starting page and number of results to
+            return. Used to loop through pages if needed. Defaults to
+            {"p": 0,"": 20000}.
+        timeout (int, optional): Amount of time in seconds to wait for
+            a timeout during the request. Defaults to 30.
+        max_timeout (int, optional): The maximum amount of time to wait
+            before raising an error and breaking the request. Defaults
+            to max_timeout set in variables.py.
 
     Returns:
-        list: A list of items from the HTTP response JSON. Returns None if empty.
+        list: A list of items from the HTTP response JSON. Returns None
+            if empty.
     """
     if not isinstance(url, str):
         raise TypeError(f"URL must be type: str, not {type(url)}")
@@ -355,33 +429,49 @@ def call_intune_api(
     if not method:
         raise ValueError("Method must not be empty")
     if method.upper() not in ["GET", "POST", "DELETE", "QUERY"]:
-        raise ValueError("Method must be one of GET, POST, DELETE, QUERY")
+        raise ValueError(
+            "Method must be one of GET, POST, DELETE, QUERY"
+        )
     if not isinstance(iiq_payload, (dict, str, NoneType)):
         raise TypeError(
             f"JSON must be type: dict, str or None, not {type(iiq_payload)}"
         )
     if not isinstance(iiq_headers, dict):
-        raise TypeError(f"Headers must be type: dict, not {type(iiq_headers)}")
+        raise TypeError(
+            f"Headers must be type: dict, not {type(iiq_headers)}"
+        )
     if not iiq_headers:
         raise ValueError("Headers must not be empty")
-    if not all(key in iiq_headers for key in vars.required_keys):
+    if not all(key in iiq_headers for key in vars.iiq_required_keys):
         missing_keys = [
-            key for key in vars.required_keys if key not in iiq_headers
+            key
+            for key in vars.iiq_required_keys
+            if key not in iiq_headers
         ]
         raise KeyError(f"Missing required keys: {missing_keys}")
     if not isinstance(params, dict):
-        raise TypeError(f"Params must be type: dict, not {type(params)}")
-    if not all(key in params for key in vars.params):
-        missing_keys = [key for key in vars.params if key not in params]
+        raise TypeError(
+            f"Params must be type: dict, not {type(params)}"
+        )
+    if not all(key in params for key in vars.iiq_params):
+        missing_keys = [
+            key for key in vars.iiq_params if key not in params
+        ]
         raise KeyError(f"Missing required keys: {missing_keys}")
     if not isinstance(timeout, int):
-        raise TypeError(f"Method must be type: int, not {type(timeout)}")
+        raise TypeError(
+            f"Method must be type: int, not {type(timeout)}"
+        )
     if not timeout:
         raise ValueError("Timeout must not be empty")
     if timeout < 0:
-        raise ValueError(f"Timeout must be a positive int, not {timeout}")
+        raise ValueError(
+            f"Timeout must be a positive int, not {timeout}"
+        )
     if not isinstance(max_timeout, int):
-        raise TypeError(f"Method must be type: json, not {type(max_timeout)}")
+        raise TypeError(
+            f"Method must be type: json, not {type(max_timeout)}"
+        )
     if not max_timeout:
         raise ValueError("Max Timeout must not be empty")
     if max_timeout < 0:
@@ -390,7 +480,8 @@ def call_intune_api(
         )
     if max_timeout < timeout:
         raise ValueError(
-            f"Max Timeout ({max_timeout}) must be greater than the timeout ({timeout})"
+            f"Max Timeout ({max_timeout}) must be greater than the timeout "
+            f"({timeout})"
         )
 
     try:
@@ -398,17 +489,22 @@ def call_intune_api(
             response = requests.get(
                 url, headers=iiq_headers, params=params, timeout=timeout
             )
-            response.raise_for_status()  # Raise an exception for error responses
-            response_json = response.json()  # Create a dict from the JSON data
+            # Raise an exception for error responses
+            response.raise_for_status()
+            response_json = (
+                response.json()
+            )  # Create a dict from the JSON data
             status_code = response_json["StatusCode"]
-            # logging.debug(f"Status Code: {status_code} | URL: {url} | Amount: {params['$s']} | Timeout: {timeout} | Response: {response_json}")
             logging.debug(f"Status Code: {status_code} | URL: {url}")
         elif method.upper() == "POST":
             response = requests.post(
                 url, iiq_payload, headers=iiq_headers, timeout=timeout
             )
-            response.raise_for_status()  # Raise an exception for error responses
-            response_json = response.json()  # Create a dict from the JSON data
+            # Raise an exception for error responses
+            response.raise_for_status()
+            response_json = (
+                response.json()
+            )  # Create a dict from the JSON data
             status_code = response_json["StatusCode"]
             msg = response_json["Message"]
             logging.debug(
@@ -422,8 +518,11 @@ def call_intune_api(
                 params=params,
                 timeout=timeout,
             )
-            response.raise_for_status()  # Raise an exception for error responses
-            response_json = response.json()  # Create a dict from the JSON data
+            # Raise an exception for error responses
+            response.raise_for_status()
+            response_json = (
+                response.json()
+            )  # Create a dict from the JSON data
             status_code = response_json["StatusCode"]
             logging.debug(f"Status Code: {status_code} | URL: {url}")
         else:
@@ -433,14 +532,14 @@ def call_intune_api(
     except requests.exceptions.Timeout:
         if timeout >= 600:  # Error and Break the loop.
             logging.error(
-                f"Request timeout={timeout} | Retrieving data exceeded {max_timeout} seconds."
+                f"Request timeout={timeout} | Retrieving data exceeded "
+                f"{max_timeout} seconds."
             )
         else:
             timeout = timeout * 2
             logging.warning(
-                "API timeout occurred. Backing off for {} seconds.".format(
-                    timeout
-                )
+                f"API timeout occurred. Backing off for {timeout} "
+                "seconds."
             )
             sleep(timeout)
             call_api(
@@ -462,7 +561,8 @@ def call_intune_api(
         return response_data[0]
     else:
         logging.warning(
-            f"Response data from API is malformed. Type: {type(response_data)}, Response: {response_data}"
+            f"Response data from API is malformed. Type: "
+            f"{type(response_data)}, Response: {response_data}"
         )
 
 
@@ -503,7 +603,7 @@ def get_location_by_id(location_id: str) -> dict:
     Returns:
         dict: The location metadata
     """
-    url = vars.locations_url + "/" + location_id
+    url = f"{vars.locations_url}/{location_id}"
     location_data = call_api(url)
     return location_data
 
@@ -512,12 +612,14 @@ def get_rooms_at_location(location_id) -> list:
     """Gets all rooms in a physical locaiton by location_id
 
     Args:
-        location_id (string): The ID of the physical site to query rooms.
+        location_id (string): The ID of the physical site to query
+            rooms.
 
     Returns:
-        list: List of dicts. Information about the rooms at that location
+        list: List of dicts. Information about the rooms at that
+            location
     """
-    url = vars.locations_url + "/" + location_id + "/rooms"
+    url = f"{vars.locations_url}/{location_id}/rooms"
     all_rooms = call_api(url)
     return all_rooms
 
@@ -531,7 +633,8 @@ def get_room_by_id(room_id) -> dict:
     Returns:
         dict: Specific details about the room
     """
-    url = vars.rooms_url + "/" + room_id  # Requires RoomID in the URL to post
+    # Requires RoomID in the URL to post
+    url = f"{vars.rooms_url}/{room_id}"
     room_data = call_api(url)
     return room_data
 
@@ -549,7 +652,7 @@ def get_all_users() -> list:
     return user_data  # list of dicts
 
 
-def get_user_id_by_email(email: str) -> str:
+def get_user_id_by_email(email: str) -> str | None:
     """Gets user data from IIQ by their email address
 
     Args:
@@ -558,11 +661,18 @@ def get_user_id_by_email(email: str) -> str:
     Returns:
         str: The UserID of the user
     """
-    url = vars.search_url  # Search Endpoint for locating userID by email
+    # Search Endpoint for locating userID by email
+    url = vars.search_url
     data = json.dumps(
         {"Query": email, "Facets": 4, "IncludeMatchedItems": False}
     )
     user_id = call_api(url, method="POST", iiq_payload=data)
+    if len(user_id) > 1:
+        logging.debug(
+            f"Search for {email} resulted in {len(user_id)}. No exact match, "
+            "returning None."
+        )
+        return None
     return user_id[0]["Id"]
 
 
@@ -573,11 +683,10 @@ def get_assigned_rooms_for_user_id(user_id: str) -> list | None:
         user_id (str): The ID string of the user to query
 
     Returns:
-        list, None: None or A list of dicts. One dict per RoomID returned.
+        list, None: None or A list of dicts. One dict per RoomID
+            returned.
     """
-    url = (
-        vars.users_url + "/" + user_id + "/rooms"
-    )  # Requires UserID in the URL to post
+    url = f"{vars.users_url}/{user_id}/rooms"
     response = call_api(url)
     if not response:
         return None
@@ -586,33 +695,28 @@ def get_assigned_rooms_for_user_id(user_id: str) -> list | None:
 
 
 def modify_assigned_rooms(user_id: str, room_id: str):
-    """Calls an API to assign a user to a room, or remove all rooms from user.
-       Defaults to removing all rooms for a given user.
+    """Calls an API to assign a user to a room, or remove all rooms
+        from user. Defaults to removing all rooms for a given user.
 
     Args:
         user_id (str): The ID of the user to modify
-        room_id (list, str, None): The room or list of rooms to add to a user. If None, removes all rooms.
+        room_id (list, str, None): The room or list of rooms to add to
+            a user. If None, removes all rooms.
     """
     if not room_id:
         # Remove assigned rooms
-        url = (
-            vars.users_url + "/" + user_id + "/rooms"
-        )  # Requires UserID in the URL to post
+        url = f"{vars.users_url}/{user_id}/rooms"
         payload = json.dumps([])
         call_api(url, method="POST", iiq_payload=payload)
     elif type(room_id) is str:
         # Add a single assigned room
-        url = (
-            vars.users_url + "/" + user_id + "/rooms"
-        )  # Requires UserID in the URL to post
+        url = f"{vars.users_url}/{user_id}/rooms"
         logging.debug(url)
         payload = json.dumps([room_id])  # Wrap room ID in a list
         call_api(url, method="POST", iiq_payload=payload)
     elif type(room_id) is list:
         # Add a list of rooms to the user
-        url = (
-            vars.users_url + "/" + user_id + "/rooms"
-        )  # Requires UserID in the URL to post
+        url = f"{vars.users_url}/{user_id}/rooms"
         logging.debug(url)
         payload = json.dumps(room_id)
         call_api(url, method="POST", iiq_payload=payload)
@@ -633,9 +737,10 @@ def get_user_activity(user_id: str) -> list:
         user_id (str): The ID of the user to query
 
     Returns:
-        list: A list of dicts containing activity from the user's timeline
+        list: A list of dicts containing activity from the user's
+            timeline
     """
-    activity_url = vars.users_url + "/" + user_id + "/activities"
+    activity_url = f"{vars.users_url}/{user_id}/activities"
     user_activity = call_api(activity_url, "GET")
     return user_activity
 
@@ -647,7 +752,8 @@ def get_all_classes() -> list:
     """Get all classes from IIQ. Classes are imported from the SIS
 
     Returns:
-        all_classes (list): A list of dicts representing classes and associated metadata
+        all_classes (list): A list of dicts representing classes and
+            associated metadata
     """
     all_classes = call_api(vars.class_url)
     return all_classes
@@ -662,7 +768,7 @@ def get_class_info(class_id: str) -> dict:
     Returns:
         class_info (dict): The class metadata
     """
-    url = vars.class_url + "/" + class_id
+    url = f"{vars.class_url}/{class_id}"
     class_info = call_api(url)
     return class_info
 
@@ -674,10 +780,11 @@ def get_classes_for_user(user_id: str) -> list | None:
         user_id (str): The UserID to query
 
     Returns:
-        classes_for_user (list): A list of class metadata for all classes assigned to the faculty member
+        classes_for_user (list): A list of class metadata for all
+            classes assigned to the faculty member
         None: No classes were found for the current UserID
     """
-    url = vars.class_for_user_url + "/" + user_id
+    url = f"{vars.class_for_user_url}/{user_id}"
     classes_for_user = call_api(url)
     if not classes_for_user:
         logging.debug(f"UserID {user_id} has no classes")
@@ -693,7 +800,8 @@ def get_assets(filter: list = []) -> list:
     """Get all assets from Incident IQ
 
     Args:
-        filter (list, optional): A list of filter arguments to pare down the results, if provided. Defaults to [].
+        filter (list, optional): A list of filter arguments to pare
+            down the results, if provided. Defaults to [].
 
     Returns:
         assets (list): A list of dicts representing assets.
@@ -708,7 +816,8 @@ def get_asset_status_types() -> list:
     """Gets all types of assets in IncidentIQ
 
     Returns:
-        asset_types (list): A list of dicts containing asset types and metadata
+        asset_types (list): A list of dicts containing asset types and
+            metadata
     """
     url = vars.assets_url_status_type
     asset_types = call_api(url)
@@ -724,7 +833,7 @@ def get_asset_by_id(asset_id: str) -> dict:
     Returns:
         asset (dict): The asset returned by the query
     """
-    url = vars.assets_url + "/" + asset_id
+    url = f"{vars.assets_url}/{asset_id}"
     asset = call_api(url, params=None)
     return asset
 
@@ -738,7 +847,7 @@ def get_asset_by_serial(serial_number: str) -> dict | None:
     Returns:
         asset (dict): The asset returned by the query
     """
-    url = vars.assets_url_by_serial + "/" + serial_number
+    url = f"{vars.assets_url_by_serial}/{serial_number}"
     asset = call_api(url, params=None)
     if isinstance(asset, list) and len(asset) == 1:
         return asset[0]
@@ -757,7 +866,7 @@ def get_asset_by_tag(asset_tag: str) -> dict | None:
     Returns:
         asset (dict): The asset returned by the query
     """
-    url = vars.assets_url_by_tag + "/" + asset_tag
+    url = f"{vars.assets_url_by_tag}/{asset_tag}"
     asset = call_api(url, params=None)
     if isinstance(asset, list) and len(asset) == 1:
         return asset[0]
@@ -768,7 +877,8 @@ def get_asset_by_tag(asset_tag: str) -> dict | None:
 
 
 def get_asset(asset_id: str) -> dict | None:
-    """Gets an asset by it's ID. ID can be any of IIQ AssetId, Serial Number or Asset Tag
+    """Gets an asset by it's ID. ID can be any of IIQ AssetId, Serial
+        Number or Asset Tag
 
     Args:
         asset_id (str): The Asset ID to look up.
@@ -776,39 +886,97 @@ def get_asset(asset_id: str) -> dict | None:
     Returns:
         dict, None: None, or a dictionary of asset details
     """
-    asset = get_asset_by_id(asset_id)
-    if asset is not None:
-        return asset
-    else:
+    try:
+        asset = get_asset_by_id(asset_id)
+    except requests.exceptions.HTTPError:
         logging.info(
-            f"Asset {asset_id} not found by IIQ AssetId. Searching for asset by Serial Number."
+            f"Asset {asset_id} not found by IIQ AssetId. Searching for "
+            f"asset by Serial Number."
         )
-        asset = get_asset_by_serial(asset_id)
-        if asset is not None:
-            return asset
-        else:
+        try:
+            asset = get_asset_by_serial(asset_id)
+        except requests.exceptions.HTTPError:
             logging.info(
-                f"Asset {asset_id} not found by Serial Number {asset_id}. Searching for asset by Asset Tag."
+                f"Asset {asset_id} not found by Serial Number "
+                f"{asset_id}. Searching for asset by Asset Tag."
             )
-            asset = get_asset_by_tag(asset_id)
-            if asset is not None:
-                return asset
-            else:
-                logging.warning(
-                    f"Asset {asset_id} not found by Asset Tag, Serial Number or IIQ AssetId. Returning None."
-                )
-                return None
+            try:
+                asset = get_asset_by_tag(asset_id)
+            except Exception as e:
+                asset = None
+                raise e
+
+    return asset
 
 
-def update_owner(asset_id: str, owner_id: str):
-    """Updates the owner of an asset by the owner's user ID. If the owner_id is None, removes the owner from the asset
+def update_owner(asset_id: str, owner_id: str | None):
+    """Updates the owner of an asset by the owner's user ID. If the
+        owner_id is None, removes the owner from the asset
 
     Args:
         asset_id (str): The Asset ID to update
-        owner_id (str, None): The User ID to assign to the asset. If none, unassigns the asset
+        owner_id (str, None): The User ID to assign to the asset. If
+            None, unassigns the asset
     """
     url = vars.assets_url + "/" + asset_id + "/owner"
     payload = json.dumps({"OwnerId": owner_id})
+    response = call_api(url, method="POST", iiq_payload=payload)
+    logging.debug(response["Message"])
+
+
+def update_asset(asset_id: str, asset_details: dict):
+    """Updates an asset with values provided in the asset_details
+        dictionary. Any keys or values not passed will be set to None.
+        Recommended approach is to retrieve the asset with one of
+        get_asset_by_id(), get_asset_by_serial(), or
+        get_asset_by_tag(), modify the retrieved asset dict, and pass
+        the modified dict to asset_details. This will prevent
+        accidentally clearing data from the device.
+
+    Args:
+        asset_id (str): The ID of the asset to update
+        asset_details (dict): The dict containing the asset values.
+            Three values are required: AssetTag, AssetTypeId, ModelId.
+            Any keys not list or values set to None will be cleared
+            from the asset.
+
+    Raises:
+        TypeError: asset_id must be a string
+        TypeError: asset_details must be a dict
+        KeyError: AssetTag must be provided, cannot be None
+        ValueError: AssetTag must be a str
+        KeyError: AssetTypeId must be provided, cannot be None
+        ValueError: AssetTypeId must be a str
+        KeyError: ModelId must be provided, cannot be None
+        ValueError: ModelId must be a str
+    """
+    if not isinstance(asset_id, str):
+        raise TypeError("asset_id must be a str")
+    if not isinstance(asset_details, dict):
+        raise TypeError("asset_details must be a dict")
+    if "AssetTag" not in asset_details:
+        raise KeyError("Missing required key 'AssetTag'")
+    if not isinstance(asset_details["AssetTag"], str):
+        raise ValueError(
+            f"AssetTag must be a str, not "
+            f"{type(asset_details["AssetTag"])}"
+        )
+    if "AssetTypeId" not in asset_details:
+        raise KeyError("Missing required key 'AssetTypeID'")
+    if not isinstance(asset_details["AssetTypeId"], str):
+        raise ValueError(
+            f"AssetTypeId must be a str, not "
+            f"{type(asset_details["AssetTypeId"])}"
+        )
+    if "ModelId" not in asset_details:
+        raise KeyError("Missing required key 'ModelId'")
+    if not isinstance(asset_details["ModelId"], str):
+        raise ValueError(
+            f"ModelId must be a str, not {type(asset_details["ModelId"])}"
+        )
+
+    url = f"{vars.assets_url}/{asset_id}"
+    payload = json.dumps(asset_details)
     response = call_api(url, method="POST", iiq_payload=payload)
     logging.debug(response["Message"])
 
@@ -831,7 +999,9 @@ def get_it_tickets_for_user_id(user_id: str):
     return response
 
 
-def get_it_ticket_for_user_and_asset(user_id: str, asset_id: str) -> list:
+def get_it_ticket_for_user_and_asset(
+    user_id: str, asset_id: str
+) -> list:
     url = vars.tickets_url
     search_payload = {
         "Filters": [
@@ -841,7 +1011,8 @@ def get_it_ticket_for_user_and_asset(user_id: str, asset_id: str) -> list:
     }
     search_payload = json.dumps(search_payload)
     logging.debug(
-        f"search_payload type {type(search_payload)} | value: {search_payload}"
+        f"search_payload type {type(search_payload)} | value: "
+        f"{search_payload}"
     )
     response = requests.post(
         url, data=search_payload, headers=config.set_headers()
@@ -849,11 +1020,13 @@ def get_it_ticket_for_user_and_asset(user_id: str, asset_id: str) -> list:
     response_json = response.json()
     if response_json["ItemCount"] <= 0:
         logging.info(
-            f"API POST call to {url} returned {response_json["ItemCount"]} results."
+            f"API POST call to {url} returned {response_json["ItemCount"]} "
+            "results."
         )
         return None
     elif response_json["ItemCount"] >= 1:
         logging.info(
-            f"API POST call to {url} returned {response_json["ItemCount"]} result(s)."
+            f"API POST call to {url} returned {response_json["ItemCount"]} "
+            "result(s)."
         )
         return response_json["Items"]
