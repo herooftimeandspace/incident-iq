@@ -1,7 +1,8 @@
 FROM python:3.12
 ARG COPILOT_ENV
 ENV PYTHONUNBUFFERED=1
-ENV COPILOT_ENV=${COPILOT_ENV} 
+ENV COPILOT_ENV=${COPILOT_ENV}
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 RUN mkdir iiq
 COPY . /iiq
 RUN pip3 install -r /iiq/requirements.txt --root-user-action=ignore
