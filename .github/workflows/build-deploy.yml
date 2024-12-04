@@ -31,10 +31,10 @@ jobs:
       run: echo "copilot_env=prod" >> $GITHUB_ENV
     - name: Stop Container
       run: |
-        docker stop $$(docker ps -q --filter "label=$copilot_env") || true
-        docker rm $$(docker ps -q --filter "label=$copilot_env") || true
+        docker ps --filter "label=env=$copilot_env" -aq | xargs docker stop || true
+        docker ps --filter "label=env=$copilot_env" -aq | xargs docker rm || true
     - name: Build the Docker image
-      run: docker build . --build-arg COPILOT_ENV=$copilot_env --file Dockerfile --label $copilot_env --tag iiq-$copilot_env
+      run: docker build . --build-arg COPILOT_ENV=$copilot_env --file Dockerfile --label "env=$copilot_env" --tag iiq-$copilot_env
     - name: Run Docker
       run:  |
         echo "Env set to $copilot_env"
@@ -47,8 +47,8 @@ jobs:
       if: contains( github.ref, 'dev')
       run: |
         echo "Cleaning Docker Dev"
-        docker rm -v $(docker ps -a -q -f status=exited) || true
-        docker rmi $(docker images -f "dangling=true" -q) || true
+        docker rm -v $(docker ps -a -q --filter status=exited) || true
+        docker rmi $(docker images --filter "dangling=true" -q) || true
         docker system prune -a --force --filter "label!=prod" || true
     - name: staging_cleanup
       if: contains( github.ref, 'staging')
