@@ -31,8 +31,8 @@ jobs:
       run: echo "copilot_env=prod" >> $GITHUB_ENV
     - name: Stop Container
       run: |
-        docker stop $(docker ps -q --filter "label=$GITHUB_ENV") || true
-        docker rm $(docker ps -q --filter "label=$GITHUB_ENV") || true
+        docker stop $(docker ps -q --filter "label=$copilot_env") || true
+        docker rm $(docker ps -q --filter "label=$copilot_env") || true
     - name: Build the Docker image
       run: docker build . --build-arg COPILOT_ENV=$copilot_env --file Dockerfile --label $copilot_env --tag iiq-$copilot_env
     - name: Run Docker
