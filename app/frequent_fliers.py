@@ -284,39 +284,39 @@ def get_frequent_flier_activity(
         frequent_flier_activity = []
         user_activity = None
         if user["RoleId"] != student_role_id:
-            logging.debug(f"User {user["Email"]} is not a student.")
+            logging.debug(f"User {user['Email']} is not a student.")
             continue
         elif user["LocationId"] != site_id and site_id is not None:
             logging.debug(
-                f"User {user["Email"]} is not at site_id: {site_id}."
+                f"User {user['Email']} is not at site_id: {site_id}."
             )  # For testing purposes.
             continue
         elif user["LocationId"] != site_id and site_id is None:
             logging.debug(
-                f"User {user["Email"]} is in scope. Site_id == {site_id}"
+                f"User {user['Email']} is in scope. Site_id == {site_id}"
             )
         elif not helper.is_within_last_N_days(
             user["ModifiedDate"], days
         ):
             logging.debug(
-                f"User {user["Email"]} modified date > {days} days."
+                f"User {user['Email']} modified date > {days} days."
             )
             continue
         else:
             logging.debug(
-                f"User {user["Email"]} meets the criteria for evaluation"
+                f"User {user['Email']} meets the criteria for evaluation"
             )
 
         user_activity = iiq.get_user_activity(user["UserId"])
 
         if not user_activity:
             logging.debug(
-                f"User activity for {user["Email"]} is empty. Continuing."
+                f"User activity for {user['Email']} is empty. Continuing."
             )
             continue
         else:
             logging.debug(
-                f"User activity for {user["Email"]} has {len(user_activity)} "
+                f"User activity for {user['Email']} has {len(user_activity)} "
                 "records. Continuing to process."
             )
 
@@ -335,14 +335,14 @@ def get_frequent_flier_activity(
                 act["UserDetails"] == "AppId: googleSso"
             ):  # Skip SSO updates
                 logging.debug(
-                    f"Activity value: {act["UserDetails"]}. Skipping activity."
+                    f"Activity value: {act['UserDetails']}. Skipping activity."
                 )
                 continue
             elif (
                 act["UserDetails"] == "AppId: aeriesSis"
             ):  # Skip SIS updates
                 logging.debug(
-                    f"Activity value: {act["UserDetails"]}. Skipping activity."
+                    f"Activity value: {act['UserDetails']}. Skipping activity."
                 )
                 continue
             elif (
@@ -351,16 +351,16 @@ def get_frequent_flier_activity(
             ):  # TypeCheck. Activity shouldn't be a str > 0
                 logging.debug(
                     f"Activity is a string, and has a length greater than 0. "
-                    f"{len(act["UserDetails"])} | type: "
-                    f"{type(act["UserDetails"])} "
-                    f"| value: {act["UserDetails"]}"
+                    f"{len(act['UserDetails'])} | type: "
+                    f"{type(act['UserDetails'])} "
+                    f"| value: {act['UserDetails']}"
                 )
                 continue  # skip
             elif (
                 len(act["UserDetails"]) == 0
             ):  # We might need a better way to check this.
                 logging.debug(
-                    f"Activty len is {len(act["UserDetails"])}."
+                    f"Activty len is {len(act['UserDetails'])}."
                 )
                 event["Date"] = act["ActivityDate"]
                 # Parse Activity string
@@ -403,7 +403,7 @@ def get_frequent_flier_activity(
                             logging.debug(f"Event data: {event}")
                         else:
                             logging.debug(
-                                f"i['p'] is {i["p"]} not 'Asset'"
+                                f"i['p'] is {i['p']} not 'Asset'"
                             )
                 else:
                     logging.warning(
@@ -413,7 +413,7 @@ def get_frequent_flier_activity(
             else:
                 logging.warning(
                     f"User Details is not an expected type or value: "
-                    f"{act["UserDetails"]}"
+                    f"{act['UserDetails']}"
                 )
 
         if frequent_flier_activity:  # Remove duplicates from the list
@@ -453,13 +453,13 @@ def get_related_tickets(frequent_flier_events: list) -> list:
         # Try multiple methods to find the asset
         if asset is None:
             logging.info(
-                f"Asset {event["Serial Number"]} not found by Serial Number. "
+                f"Asset {event['Serial Number']} not found by Serial Number. "
                 "Searching for asset by Asset Tag."
             )
             asset = iiq.get_asset_by_tag(event["Serial Number"])
             if asset is None:
                 logging.warning(
-                    f"Asset {event["Serial Number"]} not found by Asset Tag "
+                    f"Asset {event['Serial Number']} not found by Asset Tag "
                     "or Serial Number. Moving to next event."
                 )
                 continue
@@ -487,15 +487,15 @@ def get_related_tickets(frequent_flier_events: list) -> list:
         # Search for tickets requested by or on behalf of the user,
         # that also match the Asset ID of the Serial Number
         logging.debug(
-            f"UserId {event["UserId"]} | AssetId {asset["AssetId"]}"
+            f"UserId {event['UserId']} | AssetId {asset['AssetId']}"
         )
         tickets = iiq.get_it_ticket_for_user_and_asset(
             event["UserId"], asset["AssetId"]
         )
         if not tickets or isinstance(tickets, NoneType):
             logging.info(
-                f"No tickets associated with both {event["Email"]} and "
-                f"{event["Serial Number"]}. Moving to next event."
+                f"No tickets associated with both {event['Email']} and "
+                f"{event['Serial Number']}. Moving to next event."
             )
             frequent_flier_events[index]["Tickets"] = None
             continue
@@ -571,11 +571,13 @@ def create_subsheets(
         # List must be a 2D array, even when updating a single cell
         query = [
             [
-                f"=query('{data_tab_name}'!1:1000,\"select B,C,E,F,G,H,I,J "
-                f"where D='{loc["Name"]}' order by B,F\",1)"
+                f"=ifna("
+                f"query('{data_tab_name}'!1:1000,\"select B,C,E,F,G,H,I,J "
+                f"where D='{loc['Name']}' order by B,F\",1),"
+                f'"No Students found in the last {vars.event_days} days")'
             ]
         ]
-        range = f"'{loc["Abbreviation"]}'!A1"
+        range = f"'{loc['Abbreviation']}'!A1"
 
         update_resp = elgoog.update_values(
             spreadsheet_id=sheet_id,
@@ -640,8 +642,8 @@ def send_email(svc_creds, iiq_config: dict) -> dict:
     message["Subject"] = iiq_config["Subject"]
 
     logging.info(
-        f"Sending email from {message["From"]} to {message["BCC"]} with "
-        f"subject {message["Subject"]}"
+        f"Sending email from {message['From']} to {message['BCC']} with "
+        f"subject {message['Subject']}"
     )
     response_msg = elgoog.gmail_send_message(svc_creds, message)
     return response_msg

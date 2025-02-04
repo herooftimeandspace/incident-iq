@@ -216,6 +216,8 @@ def convert_to_sheets(data: list) -> list:
             )
     values = []
     header_row = []
+    if not data:
+        return values
     headers = data[0].keys()
     for h in headers:
         header_row.append(h)
