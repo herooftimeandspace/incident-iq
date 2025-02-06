@@ -62,6 +62,7 @@ def set_headers() -> dict:
         header_json (dict): The headers containing the content type and
             authorization bearer token
     """
+
     secret = load_secrets()
     bearer_token = secret["bearer_token"]
     header_json = {
