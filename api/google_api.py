@@ -1,3 +1,4 @@
+from email.message import EmailMessage
 import logging
 import os
 import os.path
@@ -42,7 +43,9 @@ def load_google_credentials():
     return creds
 
 
-def gmail_send_message(svc_creds, message):
+def gmail_send_message(
+    svc_creds: service_account.Credentials, message: EmailMessage
+):
     """Creates and sends an email via a service account
 
     Args:
@@ -79,7 +82,9 @@ def gmail_send_message(svc_creds, message):
     return send_message
 
 
-def create_sheet(folder_id, file_name, creds):
+def create_sheet(
+    folder_id: str, file_name: str, creds: service_account.Credentials
+):
     """Creates a sheet within a given folder or Google Shared Drive
 
     Args:
@@ -117,7 +122,11 @@ def create_sheet(folder_id, file_name, creds):
 
 
 def update_values(
-    spreadsheet_id, range_name, value_input_option, values, creds
+    spreadsheet_id: str,
+    range_name: str,
+    value_input_option: str,
+    values: list,
+    creds: service_account.Credentials,
 ):
     """Updates values within a Google spreadsheet
 
@@ -159,7 +168,9 @@ def update_values(
 # gmail_send_message(svc_creds)
 
 
-def update_sheet(spreadsheet_id, creds, body):
+def update_sheet(
+    spreadsheet_id: str, creds: service_account.Credentials, body: list
+):
     """Updates a Google Sheet
 
     Args:
@@ -203,6 +214,33 @@ def get_spreadsheet(spreadsheet_id, creds):
         result = (
             service.spreadsheets()
             .get(spreadsheetId=spreadsheet_id)
+            .execute()
+        )
+        return result
+    except HttpError as error:
+        logging.error(f"An error occurred: {error}")
+        return error
+
+
+def clear_spreadsheet_tab(
+    spreadsheet_id: str,
+    tab_name: str,
+    creds: service_account.Credentials,
+):
+    sheet = get_spreadsheet(spreadsheet_id, creds)
+    if not tab_name or tab_name == "Sheet 1":
+        logging.warning(
+            f"Attempted to clear the default tab {tab_name} for "
+            f"{sheet['name']}. Operation aborted. Please rename "
+            "the default tab."
+        )
+        return None
+    try:
+        service = build("sheets", "v4", credentials=creds)
+        result = (
+            service.spreadsheets()
+            .values()
+            .clear(spreadsheetId=spreadsheet_id, range=tab_name)
             .execute()
         )
         return result
