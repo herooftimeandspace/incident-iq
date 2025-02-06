@@ -50,7 +50,11 @@ zoom_oauth_url = (
 )
 zoom_base_url = "https://api.zoom.us/v2"
 zoom_users_url = zoom_base_url + "/users"
-zoom_phone_device_url = zoom_base_url + "/phone/devices"
+zoom_phone_url = zoom_base_url + "/phone"
+zoom_phone_device_url = zoom_phone_url + "/devices"
+
+zoom_page_size = 100
+zoom_default_params = {"page_size": zoom_page_size}
 
 # Global Variables to refer to if not defined in functions
 iiq_params = {"p": 0, "$s": 20000}
