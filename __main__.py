@@ -2,6 +2,7 @@ import app.app as app
 import app.config as config
 import app.frequent_fliers as ff
 import app.room_updates as room
+import app.zoom as zoom
 import logging
 
 if __name__ == "__main__":
@@ -25,6 +26,7 @@ if __name__ == "__main__":
         try:
             ff.run(env_vars["env"])
             room.run(env_vars["env"])
+            zoom.run(env_vars["env"])
         except KeyboardInterrupt:
             logging.warning(
                 "One-time script execution halted by Keyboard Interrupt"
