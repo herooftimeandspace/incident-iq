@@ -42,6 +42,18 @@ if __name__ == "__main__":
                 "Scheduled Jobs shut down due to Keyboard Interrupt."
             )
             config.scheduler.shutdown()
+    elif env_vars["env"] == "--manual":
+        logging.info(
+            f"The '{config.env}' flag was passed from the command line."
+            " Running prod manually."
+        )
+        env_vars["env"] = "--prod"
+        try:
+            ff.run(env_vars["env"])
+        except KeyboardInterrupt:
+            logging.warning(
+                "Scheduled Jobs shut down due to Keyboard Interrupt."
+            )
     elif env_vars["env"] in config.prod_env_flags:
         logging.info(
             f"The '{config.env}' flag was passed from the command line."
