@@ -35,7 +35,7 @@ stage_env_flags = [
     "--staging",
 ]
 test_env_flags = list(set(dev_env_flags + stage_env_flags))
-prod_env_flags = ["-p", "-prod", "--p", "--prod"]
+prod_env_flags = ["-p", "-prod", "--p", "--prod","--manual"]
 
 
 def load_secrets(file: str = "secrets.json") -> dict:
